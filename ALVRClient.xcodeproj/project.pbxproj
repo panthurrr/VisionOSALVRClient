@@ -7,12 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		9ED257172B8062A2008DC22F /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED257162B8062A1008DC22F /* Settings.swift */; };
 		8E1240FF2B7CC02E005B75F2 /* Entry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E1240FE2B7CC02E005B75F2 /* Entry.swift */; };
 		8E1241032B7CC0E1005B75F2 /* EntryControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E1241022B7CC0E1005B75F2 /* EntryControls.swift */; };
 		8E458AB32B7E05FB0019FC73 /* EventHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E458AB22B7E05FB0019FC73 /* EventHandler.swift */; };
 		8E458AB52B7E2C010019FC73 /* WorldTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E458AB42B7E2C010019FC73 /* WorldTracker.swift */; };
 		8E739C8B2B78990B0045ED16 /* ViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E739C8A2B78990A0045ED16 /* ViewModel.swift */; };
+		8E9A42F52B96A7930055F8B3 /* DebugControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9A42F42B96A7930055F8B3 /* DebugControls.swift */; };
+		8E9A42F72B96A7A80055F8B3 /* Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9A42F62B96A7A80055F8B3 /* Debug.swift */; };
+		8E9A42FA2B96A9C30055F8B3 /* SimRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9A42F92B96A9C30055F8B3 /* SimRenderer.swift */; };
+		8EBFFAE82B97E4ED0092A494 /* SimEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBFFAE72B97E4ED0092A494 /* SimEvents.swift */; };
+		9ED257172B8062A2008DC22F /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED257162B8062A1008DC22F /* Settings.swift */; };
 		C588CC212B6BC7B200D00DF0 /* ALVRClientCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C588CC1F2B6BC7AA00D00DF0 /* ALVRClientCore.xcframework */; };
 		C588CC222B6BC7B200D00DF0 /* ALVRClientCore.xcframework in Embed Libraries */ = {isa = PBXBuildFile; fileRef = C588CC1F2B6BC7AA00D00DF0 /* ALVRClientCore.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C5E590322B6379ED00328ED6 /* ALVRClientApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5E590312B6379ED00328ED6 /* ALVRClientApp.swift */; };
@@ -41,12 +45,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		9ED257162B8062A1008DC22F /* Settings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		8E1240FE2B7CC02E005B75F2 /* Entry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Entry.swift; sourceTree = "<group>"; };
 		8E1241022B7CC0E1005B75F2 /* EntryControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntryControls.swift; sourceTree = "<group>"; };
 		8E458AB22B7E05FB0019FC73 /* EventHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventHandler.swift; sourceTree = "<group>"; };
 		8E458AB42B7E2C010019FC73 /* WorldTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldTracker.swift; sourceTree = "<group>"; };
 		8E739C8A2B78990A0045ED16 /* ViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModel.swift; sourceTree = "<group>"; };
+		8E9A42F42B96A7930055F8B3 /* DebugControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugControls.swift; sourceTree = "<group>"; };
+		8E9A42F62B96A7A80055F8B3 /* Debug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debug.swift; sourceTree = "<group>"; };
+		8E9A42F92B96A9C30055F8B3 /* SimRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimRenderer.swift; sourceTree = "<group>"; };
+		8EBFFAE72B97E4ED0092A494 /* SimEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimEvents.swift; sourceTree = "<group>"; };
+		9ED257162B8062A1008DC22F /* Settings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		C588CC1F2B6BC7AA00D00DF0 /* ALVRClientCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = ALVRClientCore.xcframework; sourceTree = SOURCE_ROOT; };
 		C5E5902A2B6379ED00328ED6 /* ALVRClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ALVRClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C5E590312B6379ED00328ED6 /* ALVRClientApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ALVRClientApp.swift; sourceTree = "<group>"; };
@@ -94,6 +102,25 @@
 			path = Model;
 			sourceTree = "<group>";
 		};
+		8E9A42F32B96A7860055F8B3 /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				8E9A42F82B96A9B00055F8B3 /* SimRender */,
+				8E9A42F62B96A7A80055F8B3 /* Debug.swift */,
+				8E9A42F42B96A7930055F8B3 /* DebugControls.swift */,
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+		8E9A42F82B96A9B00055F8B3 /* SimRender */ = {
+			isa = PBXGroup;
+			children = (
+				8E9A42F92B96A9C30055F8B3 /* SimRenderer.swift */,
+				8EBFFAE72B97E4ED0092A494 /* SimEvents.swift */,
+			);
+			path = SimRender;
+			sourceTree = "<group>";
+		};
 		C5E590212B6379ED00328ED6 = {
 			isa = PBXGroup;
 			children = (
@@ -115,6 +142,7 @@
 		C5E5902C2B6379ED00328ED6 /* ALVRClient */ = {
 			isa = PBXGroup;
 			children = (
+				8E9A42F32B96A7860055F8B3 /* Debug */,
 				9ED257162B8062A1008DC22F /* Settings.swift */,
 				8E1240FD2B7CC021005B75F2 /* Entry */,
 				8E739C892B7898EC0045ED16 /* Model */,
@@ -221,9 +249,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				8E458AB52B7E2C010019FC73 /* WorldTracker.swift in Sources */,
+				8E9A42F72B96A7A80055F8B3 /* Debug.swift in Sources */,
 				C5E590382B6379ED00328ED6 /* Shaders.metal in Sources */,
 				D61E6FE02B71CE080076031A /* VideoHandler.swift in Sources */,
 				8E458AB32B7E05FB0019FC73 /* EventHandler.swift in Sources */,
+				8EBFFAE82B97E4ED0092A494 /* SimEvents.swift in Sources */,
 				8E1240FF2B7CC02E005B75F2 /* Entry.swift in Sources */,
 				E702FBDC2B899B8700EE75D0 /* GlobalSettings.swift in Sources */,
 				8E1241032B7CC0E1005B75F2 /* EntryControls.swift in Sources */,
@@ -231,7 +261,9 @@
 				C5E590342B6379ED00328ED6 /* ContentView.swift in Sources */,
 				9ED257172B8062A2008DC22F /* Settings.swift in Sources */,
 				C5E590362B6379ED00328ED6 /* Renderer.swift in Sources */,
+				8E9A42FA2B96A9C30055F8B3 /* SimRenderer.swift in Sources */,
 				C5E590322B6379ED00328ED6 /* ALVRClientApp.swift in Sources */,
+				8E9A42F52B96A7930055F8B3 /* DebugControls.swift in Sources */,
 				8E739C8B2B78990B0045ED16 /* ViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -367,6 +399,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"ALVRClient/Preview Content\"";
+				DEVELOPMENT_TEAM = B83769SAG5;
 				ENABLE_PREVIEWS = YES;
 				EXCLUDED_ARCHS = x86_64;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -384,6 +417,7 @@
 					"$(PROJECT_DIR)",
 				);
 				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.panthervoyage.ALVRClient;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
 				SUPPORTS_MACCATALYST = YES;
@@ -403,6 +437,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"ALVRClient/Preview Content\"";
+				DEVELOPMENT_TEAM = B83769SAG5;
 				ENABLE_PREVIEWS = YES;
 				EXCLUDED_ARCHS = x86_64;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -420,6 +455,7 @@
 					"$(PROJECT_DIR)",
 				);
 				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.panthervoyage.ALVRClient;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
 				SUPPORTS_MACCATALYST = YES;

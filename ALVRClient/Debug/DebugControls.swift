@@ -6,28 +6,25 @@ Controls that allow entry into the ALVR environment.
 import SwiftUI
 
 /// Controls that allow entry into the ALVR environment.
-struct EntryControls: View {
+struct DebugControls: View {
     @Environment(ViewModel.self) private var model
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+    @Environment(\.openWindow) private var openWindow
     @Environment(\.dismissWindow) private var dismissWindow
     @ObservedObject var eventHandler = EventHandler.shared
-    let saveAction: ()->Void
-
+    //let saveAction: ()->Void
+    
     var body: some View {
         @Bindable var model = model
         
         HStack(spacing: 17) {
-            if eventHandler.connectionState == .connected {
-                Toggle(isOn: $model.isShowingClient) {
-                    Label("Enter", systemImage: "visionpro")
+            if model.isDebugMode {
+                Toggle(isOn: $model.isShowingDebugWindow) {
+                    Label("Debug", systemImage: "gear")
                         .labelStyle(.titleAndIcon)
                         .padding(15)
                 }
-            } else {
-                Label("Connecting...", systemImage: "visionpro")
-                    .labelStyle(.titleOnly)
-                    .padding(15)
             }
             
         }
@@ -35,23 +32,14 @@ struct EntryControls: View {
         .buttonStyle(.borderless)
         .glassBackgroundEffect(in: .rect(cornerRadius: 50))
 
-        //Enable Client
-        .onChange(of: model.isShowingClient) { _, isShowing in
-            Task {
-                if isShowing {
-                    saveAction()
-                    print("Opening Immersive Space")
-                    await openImmersiveSpace(id: "Client")
-                    dismissWindow(id: "Entry")
-                }
-            }
-        }
+        //Enable Debug Window
+        
 
     }
 }
 
 
 #Preview {
-    EntryControls(saveAction: {})
+    DebugControls()
         .environment(ViewModel())
 }

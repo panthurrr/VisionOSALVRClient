@@ -10,6 +10,7 @@ import Spatial
 import ARKit
 import VideoToolbox
 import ObjectiveC
+import SwiftUI
 
 // The 256 byte aligned size of our uniform structure
 let alignedUniformsSize = (MemoryLayout<UniformsArray>.size + 0xFF) & -0x100
@@ -62,15 +63,20 @@ class Renderer {
     var uniformBufferIndex = 0
     var uniforms: UnsafeMutablePointer<UniformsArray>
     
-    var dynamicPlaneUniformBuffer: MTLBuffer
-    var planeUniformBufferOffset = 0
-    var planeUniformBufferIndex = 0
-    var planeUniforms: UnsafeMutablePointer<PlaneUniform>
+    @Environment(ViewModel.self) var model
+
+    
+//    var dynamicPlaneUniformBuffer: MTLBuffer
+//    var planeUniformBufferOffset = 0
+//    var planeUniformBufferIndex = 0
+//    var planeUniforms: UnsafeMutablePointer<PlaneUniform>
 
     var rotation: Float = 0
 
     var mesh: MTKMesh
-
+    
+    //let world = WorldTracker.shared
+    //let event = EventHandler.shared
     let layerRenderer: LayerRenderer
     // TODO(zhuowei): make this a real deque
     var metalTextureCache: CVMetalTextureCache!
@@ -90,11 +96,11 @@ class Renderer {
         self.dynamicUniformBuffer.label = "UniformBuffer"
         uniforms = UnsafeMutableRawPointer(dynamicUniformBuffer.contents()).bindMemory(to:UniformsArray.self, capacity:1)
 
-        let planeUniformBufferSize = alignedPlaneUniformSize * maxPlanesDrawn
-        self.dynamicPlaneUniformBuffer = self.device.makeBuffer(length:planeUniformBufferSize,
-                                                           options:[MTLResourceOptions.storageModeShared])!
-        self.dynamicPlaneUniformBuffer.label = "PlaneUniformBuffer"
-        planeUniforms = UnsafeMutableRawPointer(dynamicPlaneUniformBuffer.contents()).bindMemory(to:PlaneUniform.self, capacity:1)
+      //  let planeUniformBufferSize = alignedPlaneUniformSize * maxPlanesDrawn
+      // self.dynamicPlaneUniformBuffer = self.device.makeBuffer(length:planeUniformBufferSize,
+       //                                                    options:[MTLResourceOptions.storageModeShared])!
+        //self.dynamicPlaneUniformBuffer.label = "PlaneUniformBuffer"
+     //   planeUniforms = UnsafeMutableRawPointer(dynamicPlaneUniformBuffer.contents()).bindMemory(to:PlaneUniform.self, capacity:1)
 
         mtlVertexDescriptor = Renderer.buildMetalVertexDescriptor()
 
@@ -241,6 +247,7 @@ class Renderer {
         
         return try device.makeRenderPipelineState(descriptor: pipelineDescriptor)
     }
+    //End new function
     
     class func buildRenderPipelineForVideoFrameWithDevice(device: MTLDevice,
                                                           layerRenderer: LayerRenderer,
@@ -255,6 +262,7 @@ class Renderer {
          
         let fragmentConstants = FFR.makeFunctionConstants(foveationVars)
         let fragmentFunction = try library?.makeFunction(name: "videoFrameFragmentShader_" + variantName, constantValues: fragmentConstants)
+        // New shader option
 
         let pipelineDescriptor = MTLRenderPipelineDescriptor()
         pipelineDescriptor.label = "VideoFrameRenderPipeline_" + variantName
@@ -314,7 +322,7 @@ class Renderer {
 
     }
 
-    private func updateDynamicBufferState() {
+    func updateDynamicBufferState() {
         /// Update the state of our uniform buffers before rendering
 
         uniformBufferIndex = (uniformBufferIndex + 1) % maxBuffersInFlight
@@ -323,7 +331,7 @@ class Renderer {
 
         uniforms = UnsafeMutableRawPointer(dynamicUniformBuffer.contents() + uniformBufferOffset).bindMemory(to:UniformsArray.self, capacity:1)
     }
-    
+    #if false
     private func selectNextPlaneUniformBuffer() {
         /// Update the state of our uniform buffers before rendering
 
@@ -331,6 +339,7 @@ class Renderer {
         planeUniformBufferOffset = alignedPlaneUniformSize * planeUniformBufferIndex
         planeUniforms = UnsafeMutableRawPointer(dynamicPlaneUniformBuffer.contents() + planeUniformBufferOffset).bindMemory(to:PlaneUniform.self, capacity:1)
     }
+    #endif
 
     private func updateGameStateForVideoFrame(drawable: LayerRenderer.Drawable, framePose: simd_float4x4) {
         let simdDeviceAnchor = drawable.deviceAnchor != nil ? drawable.deviceAnchor!.originFromAnchorTransform : matrix_identity_float4x4
@@ -347,7 +356,7 @@ class Renderer {
                                                    nearZ: Double(drawable.depthRange.y),
                                                    farZ: Double(drawable.depthRange.x),
                                                    reverseZ: true)
-            return Uniforms(projectionMatrix: .init(projection), modelViewMatrixFrame: viewMatrixFrame, modelViewMatrix: viewMatrix, tangents: view.tangents)
+            return Uniforms(projectionMatrix: .init(projection),  modelViewMatrix: viewMatrix, tangents: view.tangents)
         }
         
         self.uniforms[0].uniforms.0 = uniforms(forViewIndex: 0)
@@ -479,7 +488,7 @@ class Renderer {
             WorldTracker.shared.sendTracking(targetTimestamp: targetTimestamp)
         }
         
-        let deviceAnchor = WorldTracker.shared.worldTracking.queryDeviceAnchor(atTimestamp: vsyncTime)
+        let deviceAnchor = WorldTracker.shared.getDevice(vsyncTime)
         drawable.deviceAnchor = deviceAnchor
         
         /*if let queuedFrame = queuedFrame {
@@ -591,7 +600,7 @@ class Renderer {
         renderEncoder.setDepthStencilState(depthStateGreater)
         
         renderEncoder.setVertexBuffer(dynamicUniformBuffer, offset:uniformBufferOffset, index: BufferIndex.uniforms.rawValue)
-        renderEncoder.setVertexBuffer(dynamicPlaneUniformBuffer, offset:planeUniformBufferOffset, index: BufferIndex.planeUniforms.rawValue) // unused
+     //   renderEncoder.setVertexBuffer(dynamicPlaneUniformBuffer, offset:planeUniformBufferOffset, index: BufferIndex.planeUniforms.rawValue) // unused
         
         let viewports = drawable.views.map { $0.textureMap.viewport }
         
@@ -676,7 +685,7 @@ class Renderer {
         renderEncoder.setDepthStencilState(depthStateGreater)
         
         renderEncoder.setVertexBuffer(dynamicUniformBuffer, offset:uniformBufferOffset, index: BufferIndex.uniforms.rawValue)
-        renderEncoder.setVertexBuffer(dynamicPlaneUniformBuffer, offset:planeUniformBufferOffset, index: BufferIndex.planeUniforms.rawValue) // unused
+     //   renderEncoder.setVertexBuffer(dynamicPlaneUniformBuffer, offset:planeUniformBufferOffset, index: BufferIndex.planeUniforms.rawValue) // unused
         
         let viewports = drawable.views.map { $0.textureMap.viewport }
         
@@ -722,7 +731,7 @@ class Renderer {
         renderEncoder.setFrontFacing(.counterClockwise)
         renderEncoder.setViewports(viewports)
         renderEncoder.setVertexBuffer(dynamicUniformBuffer, offset:uniformBufferOffset, index: BufferIndex.uniforms.rawValue)
-        renderEncoder.setVertexBuffer(dynamicPlaneUniformBuffer, offset:planeUniformBufferOffset, index: BufferIndex.planeUniforms.rawValue) // unused
+     //   renderEncoder.setVertexBuffer(dynamicPlaneUniformBuffer, offset:planeUniformBufferOffset, index: BufferIndex.planeUniforms.rawValue) // unused
         
         if drawable.views.count > 1 {
             var viewMappings = (0..<drawable.views.count).map {
@@ -743,10 +752,10 @@ class Renderer {
             renderEncoder.setVertexBuffer(plane.geometry.meshVertices.buffer, offset: 0, index: VertexAttribute.texcoord.rawValue)
             
             //self.updateGameStateForVideoFrame(drawable: drawable, framePose: framePose, planeTransform: plane.originFromAnchorTransform)
-            selectNextPlaneUniformBuffer()
-            self.planeUniforms[0].planeTransform = plane.originFromAnchorTransform
-            self.planeUniforms[0].planeColor = planeToColor(plane: plane)
-            renderEncoder.setVertexBuffer(dynamicPlaneUniformBuffer, offset:planeUniformBufferOffset, index: BufferIndex.planeUniforms.rawValue)
+     //       selectNextPlaneUniformBuffer()
+     //       self.planeUniforms[0].planeTransform = plane.originFromAnchorTransform
+    //        self.planeUniforms[0].planeColor = planeToColor(plane: plane)
+    //        renderEncoder.setVertexBuffer(dynamicPlaneUniformBuffer, offset:planeUniformBufferOffset, index: BufferIndex.planeUniforms.rawValue)
             
             renderEncoder.drawIndexedPrimitives(type: faces.primitive == .triangle ? MTLPrimitiveType.triangle : MTLPrimitiveType.line,
                                                 indexCount: faces.count*3,
@@ -796,7 +805,7 @@ class Renderer {
         renderEncoder.setDepthStencilState(depthStateAlways)
         
         renderEncoder.setVertexBuffer(dynamicUniformBuffer, offset:uniformBufferOffset, index: BufferIndex.uniforms.rawValue)
-        renderEncoder.setVertexBuffer(dynamicPlaneUniformBuffer, offset:planeUniformBufferOffset, index: BufferIndex.planeUniforms.rawValue) // unused
+   //    renderEncoder.setVertexBuffer(dynamicPlaneUniformBuffer, offset:planeUniformBufferOffset, index: BufferIndex.planeUniforms.rawValue) // unused
         
         let viewports = drawable.views.map { $0.textureMap.viewport }
         
@@ -810,6 +819,7 @@ class Renderer {
             renderEncoder.setVertexAmplificationCount(viewports.count, viewMappings: &viewMappings)
         }
         
+        ///Real ALVR frames
         guard let queuedFrame = queuedFrame else {
             renderEncoder.endEncoding()
             return

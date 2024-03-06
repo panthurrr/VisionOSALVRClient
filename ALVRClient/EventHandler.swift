@@ -7,6 +7,7 @@ import Metal
 import VideoToolbox
 import Combine
 import AVKit
+import ARKit
 
 class EventHandler: ObservableObject {
     static let shared = EventHandler()
@@ -22,7 +23,16 @@ class EventHandler: ObservableObject {
     @Published var hostname: String = ""
     @Published var IP: String = ""
     
+    @Published var distanceFromAnchor: Float = 0
+    @Published var distanceFromWorldAnchor: Float = 0
+    @Published var distanceFromCenter: Float = 0
+    
+    var debugMode = true
+    
+    var deviceAnchor: DeviceAnchor? = nil
+    
     var renderStarted = false
+    var lastCheckedTime: Double = 0.0
     
     var inputRunning = false
     var vtDecompressionSession:VTDecompressionSession? = nil
@@ -61,12 +71,18 @@ class EventHandler: ObservableObject {
             print("Initialize ALVR")
             alvrInitialized = true
             let refreshRates:[Float] = [100, 90]
-            alvr_initialize(/*java_vm=*/nil, /*context=*/nil, UInt32(1920*2), UInt32(1824*2), refreshRates, Int32(refreshRates.count), /*supports_foveated_encoding=*/true, /*external_decoder=*/ true)
-            alvr_resume()
+            if (!debugMode) {
+                print("Real Init")
+                alvr_initialize(/*java_vm=*/nil, /*context=*/nil, UInt32(1920*2), UInt32(1824*2), refreshRates, Int32(refreshRates.count), /*supports_foveated_encoding=*/true, /*external_decoder=*/ true)
+                alvr_resume()
+            } else {
+                print("Debug")
+            }
         }
     }
     
     func start() {
+    
         alvr_resume()
 
         fixAudioForDirectStereo()
@@ -163,6 +179,7 @@ class EventHandler: ObservableObject {
     }
     
     func eventsWatchdog() {
+        #if !targetEnvironment(simulator)
         while true {
             if eventHeartbeat == lastEventHeartbeat {
                 if renderStarted || numberOfEventThreadRestarts > 10 {
@@ -184,6 +201,7 @@ class EventHandler: ObservableObject {
                 usleep(1000)
             }
         }
+        #endif
     }
     
     func handleNals() {
@@ -284,6 +302,7 @@ class EventHandler: ObservableObject {
                 handlePeriodicUpdatedValues()
             }
             
+            #if false
             if (timeLastAlvrEvent != 0 && timeLastFrameGot != 0 && (currentTime - timeLastAlvrEvent >= 5.0 || currentTime - timeLastFrameGot >= 5.0))
                || (renderStarted && timeLastFrameSent != 0 && (currentTime - timeLastFrameSent >= 5.0)) {
                 EventHandler.shared.updateConnectionState(.disconnected)
@@ -298,6 +317,7 @@ class EventHandler: ObservableObject {
                 timeLastFrameGot = CACurrentMediaTime()
                 timeLastFrameSent = CACurrentMediaTime()
             }
+            #endif
             
             if alvrInitialized && (currentTime - timeLastFrameGot >= 5.0) {
                 print("Request IDR")
@@ -414,6 +434,24 @@ class EventHandler: ObservableObject {
     func updateIP(_ newIP: String) {
         DispatchQueue.main.async {
             self.IP = newIP
+        }
+    }
+    
+    func updateAnchorDistance(_ newDistance: Float) {
+        DispatchQueue.main.async {
+            self.distanceFromAnchor = newDistance
+        }
+    }
+    
+    func updateWorldAnchorDistance(_ newDistance: Float) {
+        DispatchQueue.main.async {
+            self.distanceFromWorldAnchor = newDistance
+        }
+    }
+    
+    func updateDistanceFromCenter(_ newDistance: Float) {
+        DispatchQueue.main.async {
+            self.distanceFromCenter = newDistance
         }
     }
 

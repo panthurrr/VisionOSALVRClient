@@ -19,6 +19,10 @@ class WorldTracker {
     var deviceAnchorsLock = NSObject()
     var deviceAnchorsQueue = [UInt64]()
     var deviceAnchorsDictionary = [UInt64: simd_float4x4]()
+
+    // Immersion center anchor
+    var originAnchor: [UUID: WorldAnchor] = [:]
+    
     
     // Playspace and boundaries state
     var planeAnchors: [UUID: PlaneAnchor] = [:]
@@ -104,15 +108,17 @@ class WorldTracker {
     }
     
     func resetPlayspace() {
+        guard WorldTracker.shared.worldTracking.state == .running else { return }
         print("Reset playspace")
         // Reset playspace state
         self.worldTrackingAddedOriginAnchor = false
-        self.worldTrackingSteamVRTransform = matrix_identity_float4x4
-        self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: matrix_identity_float4x4)
+        self.worldTrackingSteamVRTransform = getDeviceOriginFromTransform()
+        self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: getDeviceOriginFromTransform())
         self.lastUpdatedTs = 0
         self.crownPressCount = 0
         self.sentPoses = 0
     }
+    
     
     func initializeAr(settings: GlobalSettings) async  {
         self.settings = settings
@@ -123,6 +129,7 @@ class WorldTracker {
             try await arSession.run([worldTracking])
             #else
             try await arSession.run([worldTracking, handTracking, sceneReconstruction, planeDetection])
+            print("Init AR session with worldTracking, handTracking, sceneReconstruction, planeDetection")
             #endif
         } catch {
             fatalError("Failed to initialize ARSession")
@@ -154,15 +161,67 @@ class WorldTracker {
     }
     
     func anchorDistanceFromOrigin(anchor: WorldAnchor) -> Float {
+        guard worldTracking.state == .running else { return -1 }
         let pos = anchor.originFromAnchorTransform.columns.3
         return simd_distance(matrix_identity_float4x4.columns.3, pos)
+    }
+    
+    func deviceDistanceFromAnchor(anchor: DeviceAnchor) -> Float {
+        guard worldTracking.state == .running else { return -1 }
+
+        let pos = anchor.originFromAnchorTransform.columns.3
+        return simd_distance(matrix_identity_float4x4.columns.3, pos)
+    }
+    
+    func deviceDistanceFromAnchor() -> Float {
+        deviceDistanceFromAnchor(anchor: getDevice(CACurrentMediaTime())!)
+    }
+    
+    func deviceDistanceFromCenter(anchor: DeviceAnchor) -> Float {
+        let pos = anchor.originFromAnchorTransform.columns.3
+        return simd_distance(self.worldOriginAnchor.originFromAnchorTransform.columns.3, pos)
+    }
+    
+    func getDevice() -> DeviceAnchor? {
+        return getDevice(CACurrentMediaTime())
+    }
+    
+    func getDevice(_ time: TimeInterval) -> DeviceAnchor? {
+        guard WorldTracker.shared.worldTracking.state == .running else { return nil }
+        return worldTracking.queryDeviceAnchor(atTimestamp: time)
+    }
+    
+    
+    func getDeviceOriginFromTransform() -> matrix_float4x4 {
+        return getDevice()?.originFromAnchorTransform ?? matrix_identity_float4x4
+    }
+    
+    func queryDeviceDistanceFromAnchor() async -> Float {
+        // Device anchors are only available when the provider is running.
+        guard WorldTracker.shared.worldTracking.state == .running else {
+            print("Missing world Tracker")
+            return -1 
+        }
+        let deviceAnchor = getDevice(CACurrentMediaTime())
+        return deviceDistanceFromAnchor(anchor: deviceAnchor!)
+
+    }
+    
+    func setCenter() {
+        setCenter(getDevice())
+    }
+    
+    func setCenter(_ deviceAnchor: DeviceAnchor?) {
+        let transform = deviceAnchor?.originFromAnchorTransform ?? matrix_identity_float4x4
+        self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: transform)
     }
     
     // We have an origin anchor which we use to maintain SteamVR's positions
     // every time visionOS's centering changes.
     func processWorldTrackingUpdates() async {
+        guard worldTracking.state == .running else { return }
         for await update in worldTracking.anchorUpdates {
-            print(update.event, update.anchor.id, update.anchor.description, update.timestamp)
+            //print(update.event, update.anchor.id, update.anchor.description, update.timestamp)
             
             switch update.event {
             case .added, .updated:
@@ -194,7 +253,7 @@ class WorldTracker {
                     
                     // This seems to happen when headset is removed, or on app close.
                     if !update.anchor.isTracked {
-                        print("Headset removed?")
+                       // print("Headset removed?")
                         //EventHandler.shared.handleHeadsetRemoved()
                         //resetPlayspace()
                         continue
@@ -205,6 +264,7 @@ class WorldTracker {
                         self.worldTrackingSteamVRTransform = anchorTransform
                     }
                     
+                    //Crown-press doesn't work for me?
                     // Crown-press shenanigans
                     if update.event == .updated {
                         let sinceLast = update.timestamp - lastUpdatedTs
@@ -224,6 +284,7 @@ class WorldTracker {
                             for anchorPurge in worldAnchors {
                                 do {
                                     if anchorDistanceFromOrigin(anchor: update.anchor) < 3.5 {
+                                        guard WorldTracker.shared.worldTracking.state == .running else { break }
                                         try await worldTracking.removeAnchor(anchorPurge.value)
                                     }
                                 }
@@ -233,13 +294,20 @@ class WorldTracker {
                                 worldAnchors.removeValue(forKey: anchorPurge.key)
                             }
                     
-                            self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: matrix_identity_float4x4)
+                            let device = getDevice()
+                            if (device != nil) {
+                                //Use device for origin to track distance traveled
+                                self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: device!.originFromAnchorTransform)
+                            } else {
+                                self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: matrix_identity_float4x4)
+                            }
                             self.worldTrackingAddedOriginAnchor = true
                             if settings.keepSteamVRCenter {
                                 self.worldTrackingSteamVRTransform = anchorTransform
                             }
                             
                             do {
+                                
                                 try await worldTracking.addAnchor(self.worldOriginAnchor)
                             }
                             catch {
@@ -255,6 +323,10 @@ class WorldTracker {
                 break
             }
         }
+    }
+    
+    func resetWorldOrigin() {
+        
     }
     
     func processHandTrackingUpdates() async {
@@ -403,7 +475,7 @@ class WorldTracker {
         
         // Predict as far into the future as Apple will allow us.
         for i in 0...20 {
-            deviceAnchor = worldTracking.queryDeviceAnchor(atTimestamp: targetTimestampWalkedBack)
+            deviceAnchor = getDevice(targetTimestampWalkedBack)
             if deviceAnchor != nil {
                 break
             }
@@ -413,7 +485,7 @@ class WorldTracker {
         // Fallback.
         if deviceAnchor == nil {
             targetTimestampWalkedBack = CACurrentMediaTime()
-            deviceAnchor = worldTracking.queryDeviceAnchor(atTimestamp: targetTimestamp)
+            deviceAnchor = getDevice(targetTimestamp)
         }
 
         // Well, I'm out of ideas.

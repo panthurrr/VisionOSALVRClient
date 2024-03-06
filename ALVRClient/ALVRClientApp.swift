@@ -21,7 +21,7 @@ struct ContentStageConfiguration: CompositorLayerConfiguration {
         
         configuration.layout = supportedLayouts.contains(.layered) ? .layered : .dedicated
         
-        configuration.colorFormat = .rgba16Float
+      //  configuration.colorFormat = .rgba16Float
     }
 }
 #endif
@@ -55,7 +55,8 @@ struct MetalRendererApp: App {
                 model.isShowingClient = false
                 EventHandler.shared.initializeAlvr()
                 await WorldTracker.shared.initializeAr(settings: gStore.settings)
-                EventHandler.shared.start()
+                EventHandler.shared.simStart()
+                //EventHandler.shared.start()
             }
             .environment(model)
             .environmentObject(EventHandler.shared)
@@ -99,6 +100,18 @@ struct MetalRendererApp: App {
             }
         }
         
+        WindowGroup(id: "Debug") {
+            Debug()
+                .environment(model)
+                .coordinateSpace(name: "Name")
+               // .distortionEffect(Shader, maxSampleOffset: CGSizeZero, isEnabled: true)
+                .tracking(/*@START_MENU_TOKEN@*/1.0/*@END_MENU_TOKEN@*/)
+                
+        }
+       // .defaultSize(width: 650, height: 600)
+        
+        
+        
         ImmersiveSpace(id: "Client") {
             CompositorLayer(configuration: ContentStageConfiguration()) { layerRenderer in
                 let renderer = Renderer(layerRenderer)
@@ -107,6 +120,16 @@ struct MetalRendererApp: App {
         }
         .immersionStyle(selection: $clientImmersionStyle, in: .full)
         .upperLimbVisibility(gStore.settings.showHandsOverlaid ? .visible : .hidden)
+        
+        ImmersiveSpace(id: "SimClient") {
+            CompositorLayer(configuration: ContentStageConfiguration()) { layerRenderer in
+                let renderer = Renderer(layerRenderer)
+                renderer.startSimRenderLoop()
+            }
+        }
+        .immersionStyle(selection: $clientImmersionStyle, in: .full)
+        .upperLimbVisibility(gStore.settings.showHandsOverlaid ? .visible : .hidden)
+
     }
     
 }
