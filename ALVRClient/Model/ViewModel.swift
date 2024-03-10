@@ -11,7 +11,9 @@ class ViewModel {
     var isShowingClient: Bool = false
     
     var isDebugMode: Bool = true
+    
     var isShowingDebugWindow: Bool = false
     var isShowingSimClient: Bool = false
+    var enableRecenter: Bool = false
     var distanceFromAnchor: Float = 0
 }

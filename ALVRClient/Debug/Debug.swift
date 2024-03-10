@@ -12,10 +12,13 @@ struct Debug: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+    @State private var isRecentering = false
    // let saveAction: ()->Void
 
     var body: some View {
         @Bindable var model = model
+        
+        let updateSem = DispatchSemaphore(value: 1)
 
         VStack {
             Text("Debug Menu")
@@ -48,8 +51,17 @@ struct Debug: View {
                             .padding(15)
                 }
                 Button("Set Center", action: {
-                    print("Resetting Center")
-                    WorldTracker.shared.setCenter()
+                    print("Setting Center")
+                    eventHandler.world.setCenter()
+                })
+                Toggle(isOn: $model.enableRecenter) {
+                    Label("Recenter", systemImage: "visionpro")
+                        .labelStyle(.titleOnly)
+                        .padding(15)
+                }
+                Button("Remove WorldAnchors", action: {
+                    print("Removing anchors")
+                    eventHandler.world.removeAllAnchors()
                 })
             }
             .toggleStyle(.button)
@@ -59,36 +71,67 @@ struct Debug: View {
             //Enable Client
             .onChange(of: model.isShowingSimClient) { _, isShowing in
                 Task {
-                    if isShowing {
-                        print("Opening Immersive Space")
-                        EventHandler.shared.alvrInitialized = true
-                        await openImmersiveSpace(id: "SimClient")
-                     
-                    } else {
-                        print("Dismiss Immersive Space")
-                        EventHandler.shared.alvrInitialized = false
-                        await dismissImmersiveSpace()
-                        print("Resetting playspace")
-                        WorldTracker.shared.resetPlayspace()
+                    if !isRecentering {
+                        if isShowing {
+                            await openingImmersiveSpace()
+                        } else {
+                            await dismissingImmersiveSpace()
+                        }
                     }
                 }
             }
             //Reset immersive space
-            .onChange(of: eventHandler.distanceFromWorldAnchor) { _, newValue in
-                if newValue > 1.5 {
-                    Task {
-                        print("Dismissing Immersive Space")
-                        await dismissImmersiveSpace()
-                        print("Resetting playspace")
-                        WorldTracker.shared.resetPlayspace()
-                        //await dismissImmersiveSpace()
-                        print("ReOpen Immersive Space")
-                        await openImmersiveSpace(id: "SimClient")
+            .onChange(of: eventHandler.distanceFromCenter) { _, newValue in
+                DispatchQueue.main.async {
+                    if model.isShowingSimClient && model.enableRecenter && newValue > 0.25 && !isRecentering {
+                        isRecentering = true
+                        if updateSem.wait(timeout: .now()) == .success {
+                            Task {
+                                await recenterImmersiveSpace()
+                            }
+                        updateSem.signal()
+                        }
                     }
                 }
             }
         }
         
+    }
+    
+    func openingImmersiveSpace() async {
+        print("Opening Immersive Space")
+        EventHandler.shared.alvrInitialized = true
+        await openImmersiveSpace(id: "Mixed")
+        EventHandler.shared.streamingActive = true
+        eventHandler.world.resetPlayspace()
+        eventHandler.world.setCenter()
+    }
+    
+    func dismissingImmersiveSpace() async {
+        print("Manual dismiss Immersive Space")
+        EventHandler.shared.alvrInitialized = false
+        EventHandler.shared.streamingActive = true
+        await dismissImmersiveSpace()
+        eventHandler.world.stopArSession()
+    }
+    
+    func recenterImmersiveSpace() async {
+        model.enableRecenter = false
+        print("Resetting playspace")
+        eventHandler.world.resetPlayspace()
+        EventHandler.shared.streamingActive = false
+        print("Recenter dismiss Immersive Space")
+        model.isShowingSimClient = false
+        await dismissImmersiveSpace()
+  //      PlacementManager.shared.persistenceManager.saveOriginAnchorsOriginsMapToDisk()
+        await openImmersiveSpace(id: "Mixed")
+        model.isShowingSimClient = true
+        EventHandler.shared.alvrInitialized = true
+        EventHandler.shared.streamingActive = true
+        try? await Task.sleep(nanoseconds: 1 * 1_000_000_000)
+        eventHandler.world.resetPlayspace()
+        eventHandler.world.setCenter()
+        isRecentering = false
     }
 }
 

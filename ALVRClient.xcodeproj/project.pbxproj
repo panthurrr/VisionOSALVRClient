@@ -12,10 +12,20 @@
 		8E458AB32B7E05FB0019FC73 /* EventHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E458AB22B7E05FB0019FC73 /* EventHandler.swift */; };
 		8E458AB52B7E2C010019FC73 /* WorldTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E458AB42B7E2C010019FC73 /* WorldTracker.swift */; };
 		8E739C8B2B78990B0045ED16 /* ViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E739C8A2B78990A0045ED16 /* ViewModel.swift */; };
+		8E9488092B982FBE006ABF5A /* MixedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9488082B982FBE006ABF5A /* MixedView.swift */; };
+		8E94880E2B983095006ABF5A /* Immersive.usda in Resources */ = {isa = PBXBuildFile; fileRef = 8E94880D2B983095006ABF5A /* Immersive.usda */; };
 		8E9A42F52B96A7930055F8B3 /* DebugControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9A42F42B96A7930055F8B3 /* DebugControls.swift */; };
 		8E9A42F72B96A7A80055F8B3 /* Debug.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9A42F62B96A7A80055F8B3 /* Debug.swift */; };
 		8E9A42FA2B96A9C30055F8B3 /* SimRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9A42F92B96A9C30055F8B3 /* SimRenderer.swift */; };
 		8EBFFAE82B97E4ED0092A494 /* SimEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EBFFAE72B97E4ED0092A494 /* SimEvents.swift */; };
+		8EFFE6F12B98F98F009AAF60 /* Scene.usda in Resources */ = {isa = PBXBuildFile; fileRef = 8EFFE6F02B98F98F009AAF60 /* Scene.usda */; };
+		8EFFE6F72B9906AB009AAF60 /* ImmersionOrigin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFFE6F62B9906AB009AAF60 /* ImmersionOrigin.swift */; };
+		8EFFE6F92B99296C009AAF60 /* GeometryUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFFE6F82B99296C009AAF60 /* GeometryUtilities.swift */; };
+		8EFFE6FB2B99301F009AAF60 /* PlacementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFFE6FA2B99301F009AAF60 /* PlacementManager.swift */; };
+		8EFFE6FF2B993243009AAF60 /* PlacementState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFFE6FE2B993243009AAF60 /* PlacementState.swift */; };
+		8EFFE7012B99326C009AAF60 /* DragState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFFE7002B99326C009AAF60 /* DragState.swift */; };
+		8EFFE7032B9935B0009AAF60 /* PersistenceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFFE7022B9935B0009AAF60 /* PersistenceManager.swift */; };
+		8EFFE7092B9AE1EF009AAF60 /* ModelLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFFE7082B9AE1EF009AAF60 /* ModelLoader.swift */; };
 		9ED257172B8062A2008DC22F /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ED257162B8062A1008DC22F /* Settings.swift */; };
 		C588CC212B6BC7B200D00DF0 /* ALVRClientCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C588CC1F2B6BC7AA00D00DF0 /* ALVRClientCore.xcframework */; };
 		C588CC222B6BC7B200D00DF0 /* ALVRClientCore.xcframework in Embed Libraries */ = {isa = PBXBuildFile; fileRef = C588CC1F2B6BC7AA00D00DF0 /* ALVRClientCore.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -50,10 +60,20 @@
 		8E458AB22B7E05FB0019FC73 /* EventHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventHandler.swift; sourceTree = "<group>"; };
 		8E458AB42B7E2C010019FC73 /* WorldTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorldTracker.swift; sourceTree = "<group>"; };
 		8E739C8A2B78990A0045ED16 /* ViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModel.swift; sourceTree = "<group>"; };
+		8E9488082B982FBE006ABF5A /* MixedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixedView.swift; sourceTree = "<group>"; };
+		8E94880D2B983095006ABF5A /* Immersive.usda */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Immersive.usda; sourceTree = "<group>"; };
 		8E9A42F42B96A7930055F8B3 /* DebugControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugControls.swift; sourceTree = "<group>"; };
 		8E9A42F62B96A7A80055F8B3 /* Debug.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Debug.swift; sourceTree = "<group>"; };
 		8E9A42F92B96A9C30055F8B3 /* SimRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimRenderer.swift; sourceTree = "<group>"; };
 		8EBFFAE72B97E4ED0092A494 /* SimEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimEvents.swift; sourceTree = "<group>"; };
+		8EFFE6F02B98F98F009AAF60 /* Scene.usda */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Scene.usda; sourceTree = "<group>"; };
+		8EFFE6F62B9906AB009AAF60 /* ImmersionOrigin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImmersionOrigin.swift; sourceTree = "<group>"; };
+		8EFFE6F82B99296C009AAF60 /* GeometryUtilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryUtilities.swift; sourceTree = "<group>"; };
+		8EFFE6FA2B99301F009AAF60 /* PlacementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementManager.swift; sourceTree = "<group>"; };
+		8EFFE6FE2B993243009AAF60 /* PlacementState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementState.swift; sourceTree = "<group>"; };
+		8EFFE7002B99326C009AAF60 /* DragState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragState.swift; sourceTree = "<group>"; };
+		8EFFE7022B9935B0009AAF60 /* PersistenceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceManager.swift; sourceTree = "<group>"; };
+		8EFFE7082B9AE1EF009AAF60 /* ModelLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelLoader.swift; sourceTree = "<group>"; };
 		9ED257162B8062A1008DC22F /* Settings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		C588CC1F2B6BC7AA00D00DF0 /* ALVRClientCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = ALVRClientCore.xcframework; sourceTree = SOURCE_ROOT; };
 		C5E5902A2B6379ED00328ED6 /* ALVRClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ALVRClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -98,13 +118,26 @@
 			isa = PBXGroup;
 			children = (
 				8E739C8A2B78990A0045ED16 /* ViewModel.swift */,
+				8EFFE6F62B9906AB009AAF60 /* ImmersionOrigin.swift */,
+				8EFFE6FA2B99301F009AAF60 /* PlacementManager.swift */,
+				8EFFE6FE2B993243009AAF60 /* PlacementState.swift */,
+				8EFFE7002B99326C009AAF60 /* DragState.swift */,
 			);
 			path = Model;
+			sourceTree = "<group>";
+		};
+		8E9487D52B982A0A006ABF5A /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				8E9488082B982FBE006ABF5A /* MixedView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 		8E9A42F32B96A7860055F8B3 /* Debug */ = {
 			isa = PBXGroup;
 			children = (
+				8E9487D52B982A0A006ABF5A /* Views */,
 				8E9A42F82B96A9B00055F8B3 /* SimRender */,
 				8E9A42F62B96A7A80055F8B3 /* Debug.swift */,
 				8E9A42F42B96A7930055F8B3 /* DebugControls.swift */,
@@ -119,6 +152,25 @@
 				8EBFFAE72B97E4ED0092A494 /* SimEvents.swift */,
 			);
 			path = SimRender;
+			sourceTree = "<group>";
+		};
+		8EFFE6F52B9905F7009AAF60 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				8EFFE6F82B99296C009AAF60 /* GeometryUtilities.swift */,
+				8EFFE7022B9935B0009AAF60 /* PersistenceManager.swift */,
+				8EFFE7082B9AE1EF009AAF60 /* ModelLoader.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		8EFFE70A2B9AE72D009AAF60 /* 3D Models */ = {
+			isa = PBXGroup;
+			children = (
+				8EFFE6F02B98F98F009AAF60 /* Scene.usda */,
+				8E94880D2B983095006ABF5A /* Immersive.usda */,
+			);
+			path = "3D Models";
 			sourceTree = "<group>";
 		};
 		C5E590212B6379ED00328ED6 = {
@@ -142,6 +194,8 @@
 		C5E5902C2B6379ED00328ED6 /* ALVRClient */ = {
 			isa = PBXGroup;
 			children = (
+				8EFFE70A2B9AE72D009AAF60 /* 3D Models */,
+				8EFFE6F52B9905F7009AAF60 /* Utilities */,
 				8E9A42F32B96A7860055F8B3 /* Debug */,
 				9ED257162B8062A1008DC22F /* Settings.swift */,
 				8E1240FD2B7CC021005B75F2 /* Entry */,
@@ -236,8 +290,10 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8E94880E2B983095006ABF5A /* Immersive.usda in Resources */,
 				C5E5903E2B6379EE00328ED6 /* Assets.xcassets in Resources */,
 				C5E5903C2B6379ED00328ED6 /* Preview Assets.xcassets in Resources */,
+				8EFFE6F12B98F98F009AAF60 /* Scene.usda in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -248,14 +304,22 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8EFFE7092B9AE1EF009AAF60 /* ModelLoader.swift in Sources */,
 				8E458AB52B7E2C010019FC73 /* WorldTracker.swift in Sources */,
+				8EFFE7032B9935B0009AAF60 /* PersistenceManager.swift in Sources */,
+				8EFFE7012B99326C009AAF60 /* DragState.swift in Sources */,
 				8E9A42F72B96A7A80055F8B3 /* Debug.swift in Sources */,
+				8E9488092B982FBE006ABF5A /* MixedView.swift in Sources */,
+				8EFFE6F72B9906AB009AAF60 /* ImmersionOrigin.swift in Sources */,
 				C5E590382B6379ED00328ED6 /* Shaders.metal in Sources */,
 				D61E6FE02B71CE080076031A /* VideoHandler.swift in Sources */,
 				8E458AB32B7E05FB0019FC73 /* EventHandler.swift in Sources */,
+				8EFFE6FB2B99301F009AAF60 /* PlacementManager.swift in Sources */,
 				8EBFFAE82B97E4ED0092A494 /* SimEvents.swift in Sources */,
 				8E1240FF2B7CC02E005B75F2 /* Entry.swift in Sources */,
+				8EFFE6F92B99296C009AAF60 /* GeometryUtilities.swift in Sources */,
 				E702FBDC2B899B8700EE75D0 /* GlobalSettings.swift in Sources */,
+				8EFFE6FF2B993243009AAF60 /* PlacementState.swift in Sources */,
 				8E1241032B7CC0E1005B75F2 /* EntryControls.swift in Sources */,
 				D68FA8092B742F6F0052B7FF /* FFR.swift in Sources */,
 				C5E590342B6379ED00328ED6 /* ContentView.swift in Sources */,

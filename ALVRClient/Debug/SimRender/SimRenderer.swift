@@ -129,15 +129,15 @@ extension Renderer {
     
     private func updateGameState(drawable: LayerRenderer.Drawable) {
         /// Update any game state before rendering
-        guard WorldTracker.shared.worldTracking.state == .running else { return }
-        let anchorDistance = WorldTracker.shared.deviceDistanceFromAnchor()
+        guard world.worldTracking.state == .running else { return }
+        //let anchorDistance = WorldTracker.shared.deviceDistanceFromAnchor()
         Task {
             //await WorldTracker.shared.processWorldTrackingUpdates()
         }
-        let worldAnchorDistance = WorldTracker.shared.anchorDistanceFromOrigin(anchor: WorldTracker.shared.worldOriginAnchor)
-        let device = WorldTracker.shared.getDevice()
-        let distanceFromCenter = WorldTracker.shared.deviceDistanceFromCenter(anchor: device!)
-        EventHandler.shared.updateAnchorDistance(anchorDistance)
+        let worldAnchorDistance = world.anchorDistanceFromOrigin(anchor: world.worldOriginAnchor)
+        let device = world.getDevice()
+        let distanceFromCenter = world.deviceDistanceFromCenter(anchor: device!)
+        //EventHandler.shared.updateAnchorDistance(anchorDistance)
         EventHandler.shared.updateWorldAnchorDistance(worldAnchorDistance)
         EventHandler.shared.updateDistanceFromCenter(distanceFromCenter)
         let rotationAxis = SIMD3<Float>(1, 1, 0)
@@ -197,8 +197,8 @@ extension Renderer {
         if drawable.deviceAnchor == nil {
             
             let time = LayerRenderer.Clock.Instant.epoch.duration(to: drawable.frameTiming.presentationTime).timeInterval
-            WorldTracker.shared.sendTracking(targetTimestamp: time)
-            drawable.deviceAnchor = WorldTracker.shared.getDevice(time)
+            world.sendTracking(targetTimestamp: time)
+            drawable.deviceAnchor = world.queryDevice(time)
         }
         
         let semaphore = inFlightSemaphore

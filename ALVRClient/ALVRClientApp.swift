@@ -30,6 +30,7 @@ struct ContentStageConfiguration: CompositorLayerConfiguration {
 @main
 struct MetalRendererApp: App {
     @State private var model = ViewModel()
+    @State private var modelLoader = ModelLoader()
     @Environment(\.scenePhase) private var scenePhase
     @State private var clientImmersionStyle: ImmersionStyle = .full
     @StateObject private var gStore = GlobalSettingsStore()
@@ -54,9 +55,15 @@ struct MetalRendererApp: App {
                 }
                 model.isShowingClient = false
                 EventHandler.shared.initializeAlvr()
-                await WorldTracker.shared.initializeAr(settings: gStore.settings)
+//                await WorldTracker.shared.initializeAr(settings: gStore.settings)
                 EventHandler.shared.simStart()
                 //EventHandler.shared.start()
+            }
+            .task {
+                await modelLoader.loadObjects()
+                print("Loaded objects")
+                EventHandler.shared.setPlaceableObjects(modelLoader.placeableObjects)
+                print("Placeable objects set")
             }
             .environment(model)
             .environmentObject(EventHandler.shared)
@@ -106,7 +113,6 @@ struct MetalRendererApp: App {
                 .coordinateSpace(name: "Name")
                // .distortionEffect(Shader, maxSampleOffset: CGSizeZero, isEnabled: true)
                 .tracking(/*@START_MENU_TOKEN@*/1.0/*@END_MENU_TOKEN@*/)
-                
         }
        // .defaultSize(width: 650, height: 600)
         
@@ -129,6 +135,11 @@ struct MetalRendererApp: App {
         }
         .immersionStyle(selection: $clientImmersionStyle, in: .full)
         .upperLimbVisibility(gStore.settings.showHandsOverlaid ? .visible : .hidden)
+        
+        ImmersiveSpace(id: "Mixed") {
+            MixedView(settings: $gStore.settings)
+        }
+        //.immersionStyle(selection: $clientImmersionStyle, in: .full)
 
     }
     

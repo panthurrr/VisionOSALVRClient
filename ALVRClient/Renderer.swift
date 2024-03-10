@@ -75,8 +75,8 @@ class Renderer {
 
     var mesh: MTKMesh
     
-    //let world = WorldTracker.shared
-    //let event = EventHandler.shared
+    let world = WorldTracker()
+    let event = EventHandler.shared
     let layerRenderer: LayerRenderer
     // TODO(zhuowei): make this a real deque
     var metalTextureCache: CVMetalTextureCache!
@@ -452,7 +452,7 @@ class Renderer {
         
         let vsyncTime = LayerRenderer.Clock.Instant.epoch.duration(to: drawable.frameTiming.presentationTime).timeInterval
         let vsyncTimeNs = UInt64(vsyncTime * Double(NSEC_PER_SEC))
-        var framePreviouslyPredictedPose = queuedFrame != nil ? WorldTracker.shared.lookupDeviceAnchorFor(timestamp: queuedFrame!.timestamp) : nil
+        var framePreviouslyPredictedPose = queuedFrame != nil ? world.lookupDeviceAnchorFor(timestamp: queuedFrame!.timestamp) : nil
 
         var missingAnchor = false
         if renderingStreaming && queuedFrame != nil && framePreviouslyPredictedPose == nil {
@@ -462,7 +462,7 @@ class Renderer {
             if EventHandler.shared.lastQueuedFrame != nil {
                 print("falling back to last frame last-minute")
                 queuedFrame = EventHandler.shared.lastQueuedFrame
-                framePreviouslyPredictedPose = queuedFrame != nil ? WorldTracker.shared.lookupDeviceAnchorFor(timestamp: queuedFrame!.timestamp) : nil
+                framePreviouslyPredictedPose = queuedFrame != nil ? world.lookupDeviceAnchorFor(timestamp: queuedFrame!.timestamp) : nil
                 if framePreviouslyPredictedPose == nil {
                     framePreviouslyPredictedPose = EventHandler.shared.lastQueuedFramePose
                 }
@@ -485,10 +485,10 @@ class Renderer {
         // Do NOT move this, just in case, because DeviceAnchor is wonkey and every DeviceAnchor mutates each other.
         if EventHandler.shared.alvrInitialized /*&& (lastSubmittedTimestamp != queuedFrame?.timestamp)*/ {
             let targetTimestamp = vsyncTime + (Double(min(alvr_get_head_prediction_offset_ns(), WorldTracker.maxPrediction)) / Double(NSEC_PER_SEC))
-            WorldTracker.shared.sendTracking(targetTimestamp: targetTimestamp)
+            world.sendTracking(targetTimestamp: targetTimestamp)
         }
         
-        let deviceAnchor = WorldTracker.shared.getDevice(vsyncTime)
+        let deviceAnchor = world.queryDevice(vsyncTime)
         drawable.deviceAnchor = deviceAnchor
         
         /*if let queuedFrame = queuedFrame {
@@ -516,7 +516,7 @@ class Renderer {
             frameIsSuitableForDisplaying = false
             print("IPD is bad, no frame")
         }
-        if !WorldTracker.shared.worldTrackingAddedOriginAnchor && EventHandler.shared.framesRendered < 300 {
+        if !world.worldTrackingAddedOriginAnchor && EventHandler.shared.framesRendered < 300 {
             // Don't show frame if we haven't figured out our origin yet.
             frameIsSuitableForDisplaying = false
             print("Origin is bad, no frame")
@@ -744,8 +744,8 @@ class Renderer {
         renderEncoder.setRenderPipelineState(pipelineState)
         renderEncoder.setDepthStencilState(depthStateGreater)
         
-        WorldTracker.shared.lockPlaneAnchors()
-        for plane in WorldTracker.shared.planeAnchors {
+        world.lockPlaneAnchors()
+        for plane in world.planeAnchors {
             let plane = plane.value
             let faces = plane.geometry.meshFaces
             renderEncoder.setVertexBuffer(plane.geometry.meshVertices.buffer, offset: 0, index: VertexAttribute.position.rawValue)
@@ -763,7 +763,7 @@ class Renderer {
                                                 indexBuffer: faces.buffer,
                                                 indexBufferOffset: 0)
         }
-        WorldTracker.shared.unlockPlaneAnchors()
+        world.unlockPlaneAnchors()
         renderEncoder.popDebugGroup()
         renderEncoder.endEncoding()
     }
@@ -874,7 +874,7 @@ class Renderer {
                 //EventHandler.shared.stop()
                 EventHandler.shared.handleHeadsetRemovedOrReentry()
                 EventHandler.shared.handleHeadsetRemoved()
-                WorldTracker.shared.resetPlayspace()
+                world.resetPlayspace()
                 alvr_pause()
 
                 // visionOS sometimes sends these invalidated things really fkn late...

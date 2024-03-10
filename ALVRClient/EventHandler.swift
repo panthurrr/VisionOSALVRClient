@@ -8,6 +8,7 @@ import VideoToolbox
 import Combine
 import AVKit
 import ARKit
+import RealityKit
 
 class EventHandler: ObservableObject {
     static let shared = EventHandler()
@@ -33,6 +34,20 @@ class EventHandler: ObservableObject {
     
     var renderStarted = false
     var lastCheckedTime: Double = 0.0
+    
+    var timer: Timer?
+    var placeableOriginsByFileName: [String: ImmersionOrigin] = [:]
+    private(set) var modelDescriptors: [ModelDescriptor] = []
+
+    var placementState = PlacementState()
+    let placementLocation = Entity()
+    let deviceLocation = Entity()
+
+    var rootEntity = Entity()
+        
+    let world = WorldTracker()
+    var arkitSession = ARKitSession()
+    var handTracking = HandTrackingProvider()
     
     var inputRunning = false
     var vtDecompressionSession:VTDecompressionSession? = nil
@@ -454,6 +469,17 @@ class EventHandler: ObservableObject {
             self.distanceFromCenter = newDistance
         }
     }
+    
+    func setPlaceableObjects(_ objects: [ImmersionOrigin]) {
+        placeableOriginsByFileName = objects.reduce(into: [:]) { map, placeableObject in
+            map[placeableObject.descriptor.fileName] = placeableObject
+        }
+
+        // Sort descriptors alphabetically.
+        modelDescriptors = objects.map { $0.descriptor }.sorted { lhs, rhs in
+            lhs.displayName < rhs.displayName
+        }
+   }
 
 }
 
