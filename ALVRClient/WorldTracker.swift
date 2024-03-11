@@ -8,7 +8,6 @@ import CompositorServices
 import RealityKit
 
 class WorldTracker {
-    //static let shared = WorldTracker()
     var settings: GlobalSettings!
     
     var arSession = ARKitSession()
@@ -24,15 +23,25 @@ class WorldTracker {
     // Immersion center anchor
     var initialCenterSet: Bool = false
     var anchoredOrigins: [UUID: PlacedOrigin] = [:]
-    let originsFileName: String = "persistentOrigins.json"
-    private var persistedOriginFileNamePerAnchor: [UUID: String] = [:]
+    let originDatabaseFileName: String = "persistentOrigins.json"
+    var persistedOriginFileNamePerAnchor: [UUID: OriginData] = [:]
     var placeableOriginsByFileName: [String: ImmersionOrigin] = [:]
-   // let persistenceManager = PlacementManager.shared.persistenceManager
-//    let placementManager: PlacementManager
-   // var rootEntity: Entity
     
+    var placementState = PlacementState()
+    var placementLocation: Entity
+    var deviceLocation: Entity
+    var rootEntity: Entity
+    
+    var originsBeingAnchored: [UUID: PlacedOrigin] = [:]
+    var movingOrigins: [PlacedOrigin] = []
+    let maxOriginAnchors = 4
+    
+    //Can't pass event handler here as it loops some errors
+  //  var events = EventHandler.shared
+
     // Playspace and boundaries state
     var planeAnchors: [UUID: PlaneAnchor] = [:]
+    
     var worldAnchors: [UUID: WorldAnchor] = [:]
     var worldTrackingAddedOriginAnchor = false
     var worldTrackingSteamVRTransform: simd_float4x4 = matrix_identity_float4x4
@@ -95,10 +104,18 @@ class WorldTracker {
     static let leftForearmOrientationCorrection = simd_quatf(from: simd_float3(1.0, 0.0, 0.0), to: simd_float3(0.0, 0.0, 1.0)) * simd_quatf(from: simd_float3(0.0, 1.0, 0.0), to: simd_float3(0.0, 0.0, 1.0))
     static let rightForearmOrientationCorrection = simd_quatf(from: simd_float3(1.0, 0.0, 0.0), to: simd_float3(0.0, 0.0, 1.0)) * simd_quatf(from: simd_float3(0.0, 1.0, 0.0), to: simd_float3(0.0, 0.0, 1.0))
     
-    init() {}
+    init(rootEntity: Entity) {
+        self.rootEntity = rootEntity
+        self.placementLocation = Entity()
+        self.deviceLocation = Entity()
+    }
     
     func updateWorldTracking(worldTracking: WorldTrackingProvider) {
         
+    }
+    
+    func updateRootEntity(rootEntity: Entity) {
+        self.rootEntity = rootEntity
     }
     
     func resetPlayspace() {
@@ -113,7 +130,7 @@ class WorldTracker {
         self.sentPoses = 0
     }
     
-    // TODO 1: Test if passing variables is necessary
+    // Pass in new sessions each time immersive space is opened
     @MainActor
     func initializeAr(arSession: ARKitSession, worldTracking: WorldTrackingProvider, handTracking: HandTrackingProvider, sceneReconstruction: SceneReconstructionProvider, planeDetection: PlaneDetectionProvider, settings: GlobalSettings) async  {
         self.arSession = arSession
@@ -122,7 +139,7 @@ class WorldTracker {
         self.sceneReconstruction = sceneReconstruction
         self.planeDetection = planeDetection
         //self.placementManager = PlacementManager()
-        
+        print("Init AR succ")
         Task {
             await processReconstructionUpdates()
         }
@@ -130,48 +147,47 @@ class WorldTracker {
             await processPlaneUpdates()
         }
         Task {
-            await processWorldTrackingUpdates()
+            //Only not doing this because mixed view passes this task in
+            //await processWorldTrackingUpdates()
         }
         Task {
             await processHandTrackingUpdates()
         }
+        Task {
+            //await processDeviceAnchorUpdates()
+        }
         self.settings = settings
-        resetPlayspace()
-        
-//        do {
-//#if targetEnvironment(simulator)
-//            try await arSession.run([worldTracking])
-//#else
-//            //try await arSession.run([worldTracking, handTracking, sceneReconstruction, planeDetection])
-//            print("Running AR session with worldTracking, handTracking, sceneReconstruction, planeDetection")
-//#endif
-//        } catch {
-//            fatalError("Failed to initialize ARSession")
-//        }
+        loadPersistedOrigins()
+//        resetPlayspace()
     }
     
     @MainActor
     func runARKitSession() async {
         do {
             // Run a new set of providers every time when entering the immersive space.
-            try await arSession.run([worldTracking, planeDetection])
+            try await arSession.run([worldTracking, planeDetection, sceneReconstruction, handTracking])
         } catch {
             // No need to handle the error here; the app is already monitoring the
             // session for error.
             return
         }
         
+        let origin = placeableOriginsByFileName["Cone"]
+        select(origin)
+        
     }
     
     func stopArSession() {
+        saveOriginAnchorsOriginsMapToDisk()
+        print("Stopping ar session")
         arSession.stop()
     }
     
     func processReconstructionUpdates() async {
-        for await update in sceneReconstruction.anchorUpdates {
-            //let meshAnchor = update.anchor
-            //print(meshAnchor.id, meshAnchor.originFromAnchorTransform)
-        }
+//        for await update in sceneReconstruction.anchorUpdates {
+//            //let meshAnchor = update.anchor
+//            //print(meshAnchor.id, meshAnchor.originFromAnchorTransform)
+//        }
     }
     
     
@@ -188,7 +204,7 @@ class WorldTracker {
             case .removed:
                 removePlane(update.anchor)
             }
-            
+        
         }
     }
     
@@ -241,19 +257,196 @@ class WorldTracker {
     
     func setCenter() {
         setCenter(getDevice())
-//       persistenceManager.saveOriginAnchorsOriginsMapToDisk()
     }
     
     func setCenter(_ deviceAnchor: DeviceAnchor?) {
         if let deviceAnchor {
             let transform = deviceAnchor.originFromAnchorTransform
             Task {
-                await EventHandler.shared.updatePlacementLocation(deviceAnchor)
-                await EventHandler.shared.placeSelectedOrigin(deviceAnchor)
+                await updatePlacementLocation(deviceAnchor)
+                await placeSelectedOrigin(deviceAnchor)
             }
             self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: transform)
         }
     }
+    
+    struct OriginData : Codable {
+        let fileName: String
+        let date: Date
+    }
+    
+    func saveOriginAnchorsOriginsMapToDisk() {
+        var originAnchorsToTypes: [UUID: OriginData] = [:]
+        let sortedAnchoredOrigins = anchoredOrigins.sorted { $0.value.date < $1.value.date }
+        let latestAnchoredOrigins = Dictionary(uniqueKeysWithValues: sortedAnchoredOrigins.suffix(maxOriginAnchors))
+        for (anchorID, originData) in latestAnchoredOrigins {
+            print("Saving \(anchorID) - \(originData.date)")
+            originAnchorsToTypes[anchorID] = OriginData(fileName: originData.fileName, date: originData.date)
+        }
+        
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        do {
+            let jsonString = try encoder.encode(originAnchorsToTypes)
+            let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let filePath = documentsDirectory.appendingPathComponent(originDatabaseFileName)
+
+            do {
+                try jsonString.write(to: filePath)
+            } catch {
+                print(error)
+            }
+        } catch {
+            print(error)
+        }
+    }
+    
+    func loadPersistedOrigins() {
+        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+        let filePath = documentsDirectory.first?.appendingPathComponent(originDatabaseFileName)
+        
+        guard let filePath, FileManager.default.fileExists(atPath: filePath.path(percentEncoded: true)) else {
+            print("Couldn’t find file: '\(originDatabaseFileName)' - skipping deserialization of persistent origins.")
+            return
+        }
+
+        do {
+            let data = try Data(contentsOf: filePath)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            persistedOriginFileNamePerAnchor = try decoder.decode([UUID: OriginData].self, from: data)
+        } catch {
+            print("Failed to restore the mapping from world anchors to persisted origins.")
+        }
+    }
+    
+    @MainActor
+    func processDeviceAnchorUpdates() async {
+        print("processing device anchor updates ever 90 hz")
+        
+        await EventHandler.shared.run(function: self.queryAndProcessLatestDeviceAnchor, withFrequency: 90)
+    }
+    
+    @MainActor
+    private func queryAndProcessLatestDeviceAnchor() async {
+        // Device anchors are only available when the provider is running.
+        guard worldTracking.state == .running else { return }
+        
+        let deviceAnchor = worldTracking.queryDeviceAnchor(atTimestamp: CACurrentMediaTime())
+
+        
+        placementState.deviceAnchorPresent = deviceAnchor != nil
+        placementState.planeAnchorsPresent = true
+        placementState.selectedOrigin?.previewEntity.isEnabled = placementState.shouldShowPreview
+        
+        guard let deviceAnchor, deviceAnchor.isTracked else { return }
+        
+//        await updateUserFacingUIOrientations(deviceAnchor)
+//        await checkWhichOriginDeviceIsPointingAt(deviceAnchor)
+        await updatePlacementLocation(deviceAnchor)
+    }
+    
+    @MainActor
+    func updatePlacementLocation(_ deviceAnchor: DeviceAnchor) async {
+        deviceLocation.transform = Transform(matrix: deviceAnchor.originFromAnchorTransform)
+     //   print("Device location transformed")
+        
+        let originFromUprightDeviceAnchorTransform = deviceAnchor.originFromAnchorTransform//.gravityAligned
+        
+        let distanceFromDeviceAnchor: Float = 0.5
+        let downwardsOffset: Float = 0.3
+        //Haven't grok'd this var set
+        var uprightDeviceAnchorFromOffsetTransform = matrix_identity_float4x4
+        uprightDeviceAnchorFromOffsetTransform.translation = [0, -downwardsOffset, -distanceFromDeviceAnchor]
+        let originFromOffsetTransform = originFromUprightDeviceAnchorTransform * uprightDeviceAnchorFromOffsetTransform
+        
+        placementLocation.transform = Transform(matrix: originFromOffsetTransform)
+    
+        //plane to project on found is the important part for placement ?
+        placementState.planeToProjectOnFound = true
+        
+    }
+    
+    @MainActor
+    func select(_ origin: ImmersionOrigin?) {
+        if let oldSelection = placementState.selectedOrigin {
+            // Remove the current preview entity.
+            placementLocation.removeChild(oldSelection.previewEntity)
+
+            // Handle deselection. Selecting the same object again in the app deselects it.
+//            if oldSelection.descriptor.fileName == origin?.descriptor.fileName {
+//                select(nil)
+//                return
+//            }
+        }
+        placementState.selectedOrigin = origin
+        //This line gives us trouble when making a second world tracker
+        EventHandler.shared.selectedFileName = (origin?.descriptor.fileName)!
+
+        if let origin {
+            // Add new preview entity.
+            placementLocation.addChild(origin.previewEntity)
+        }
+    }
+    
+    @MainActor
+    func getOrigin() {
+        let object = placeableOriginsByFileName["Cone"]
+        select(object)
+    }
+    
+    @MainActor
+    func placeSelectedOrigin(_ deviceAnchor: DeviceAnchor) {
+        // Ensure there’s a placeable origin.
+        self.getOrigin()
+        guard let originToPlace = placementState.originToPlace else { return }
+
+        let origin = originToPlace.materialize(Date())
+//        origin.position = placementLocation.position
+//        origin.orientation = placementLocation.orientation
+        origin.position = deviceLocation.position
+        origin.orientation = deviceLocation.orientation
+        
+        Task {
+            await attachOriginToWorldAnchor(origin)
+        }
+        placementState.userPlacedAnOrigin = true
+    }
+    
+    @MainActor
+    func attachOriginToWorldAnchor(_ origin: PlacedOrigin) async {
+        // First, create a new world anchor and try to add it to the world tracking provider.
+        let anchor = WorldAnchor(originFromAnchorTransform: origin.transformMatrix(relativeTo: nil))
+        movingOrigins.removeAll(where: { $0 === origin })
+        originsBeingAnchored[anchor.id] = origin
+        do {
+            try await worldTracking.addAnchor(anchor)
+            anchoredOrigins[anchor.id] = origin
+            print("Attached origin \(origin.fileName): \(anchor.id) - \(CACurrentMediaTime())")
+        } catch {
+            // Adding world anchors can fail, such as when you reach the limit
+            // for total world anchors per app. Keep track
+            // of all world anchors and delete any that no longer have
+            // an origin attached.
+            
+            if let worldTrackingError = error as? WorldTrackingProvider.Error, worldTrackingError.code == .worldAnchorLimitReached {
+                print(
+"""
+Unable to place origin "\(origin.name)". You’ve placed the maximum number of origins.
+Remove old origins before placing new ones.
+"""
+                )
+            } else {
+                print("Failed to add world anchor \(anchor.id) with error: \(error).")
+            }
+            
+            originsBeingAnchored.removeValue(forKey: anchor.id)
+            origin.removeFromParent()
+            return
+        }
+    }
+    
+    
     
     func removeAnchorWithID(_ uuid: UUID) async {
         do {
@@ -277,19 +470,75 @@ class WorldTracker {
             }
         }
     }
+    
+    @MainActor
+    func deleteAnchorsForAnchoredOrigins() async {
+        print("DeleteAnchorsForAnchoredOrigins")
+        for anchorID in anchoredOrigins.keys {
+            await removeAnchorWithID(anchorID)
+        }
+    }
+    
+    @MainActor
+    func attachPersistedOriginToAnchor(_ persistedOrigin: OriginData, anchor: WorldAnchor) {
+        guard let placeableOrigin = placeableOriginsByFileName[persistedOrigin.fileName] else {
+            print("No origin available for '\(persistedOrigin.date)' - it will be ignored.")
+            return
+        }
+        print("Attaching persisted origin: \(persistedOrigin.fileName) from date: \(persistedOrigin.date) - \(anchor.id)")
+
+        let origin = placeableOrigin.materialize(persistedOrigin.date)
+        origin.position = anchor.originFromAnchorTransform.translation
+        origin.orientation = anchor.originFromAnchorTransform.rotation
+        origin.isEnabled = anchor.isTracked        
+        rootEntity.addChild(origin)
+        
+        anchoredOrigins[anchor.id] = origin
+    }
+    
     // We have an origin anchor which we use to maintain SteamVR's positions
     // every time visionOS's centering changes.
+    @MainActor
     func processWorldTrackingUpdates() async {
-        guard worldTracking.state == .running else { return }
+       // guard worldTracking.state == .running else { return }
         for await update in worldTracking.anchorUpdates {
-            //print(update.event, update.anchor.id, update.anchor.description, update.timestamp)
-          // anchorCount+=1
-           // print("\(update.event.description.capitalized) anchor \(anchorCount) : \(update.anchor.id)")
+            let anchor = update.anchor
+
+            if update.event != .removed {
+                worldAnchors[anchor.id] = anchor
+            } else {
+                worldAnchors.removeValue(forKey: anchor.id)
+            }
+            
             switch update.event {
-            case .added, .updated:
+            case .added:
+                
+//                if let persistedObjectFileName = persistedObjectFileNamePerAnchor[anchor.id] {
+//                    attachPersistedObjectToAnchor(persistedObjectFileName, anchor: anchor)
+//                }
+                if let persistedOriginFileName = persistedOriginFileNamePerAnchor[anchor.id] {
+                    attachPersistedOriginToAnchor(persistedOriginFileName, anchor: anchor)
+                } else if let originBeingAnchored = originsBeingAnchored[anchor.id] {
+                    originsBeingAnchored.removeValue(forKey: anchor.id)
+                    anchoredOrigins[anchor.id] = originBeingAnchored
+                    print("Displaying origin \(originBeingAnchored.fileName)")
+                    // Now that the anchor has been successfully added, display the object.
+                    EventHandler.shared.rootEntity.addChild(originBeingAnchored)
+                    //Only display object once added to rootEntity
+                } else {
+                    if anchoredOrigins[anchor.id] == nil {
+                        Task {
+                            // Immediately delete world anchors for which no placed object is known.
+                            print("No object is attached to anchor \(anchor.id) - it can be deleted.")
+                            await removeAnchorWithID(anchor.id)
+                        }
+                    }
+                }
+                fallthrough
+//            case .updated:
                 // This checks every world anchor
                 // Check for prior world anchors
-                let anchor = update.anchor
+//                let anchor = update.anchor
 //                if let originType = PersistenceManager.shared.persistedOriginDataPerAnchor[anchor.id] {
 //                    await PersistenceManager.shared.attachPersistedOriginToAnchor(originType, anchor: anchor)
 //                } else if let originBeingAnchored = PersistenceManager.shared.originsBeingAnchored[anchor.id] {
@@ -298,105 +547,112 @@ class WorldTracker {
 //                    //Display Origin (we don't need to display)
 //                }
                 
-                worldAnchors[anchor.id] = anchor
-                if !self.worldTrackingAddedOriginAnchor {
-                    print("Early origin anchor?", anchorDistanceFromOrigin(anchor: update.anchor), "Current Origin,", self.worldOriginAnchor.id)
-                    
-                    // If we randomly get an anchor added within 3.5m, consider that our origin
-                    // What would randomly cause an ahcor
-                    if anchorDistanceFromOrigin(anchor: update.anchor) < 3.5 {
-                        print("Set new origin!")
-                        
-                        // This has a (positive) minor side-effect: all redundant anchors within 3.5m will get cleaned up,
-                        // though which anchor gets chosen will be arbitrary.
-                        // But there should only be one anyway.
-                        
-                        //Setup list of anchors similar to persistence manager to store only one Origin Anchor
-                        do {
-                            try await worldTracking.removeAnchor(self.worldOriginAnchor)
-                        }
-                        catch {
-                            // don't care
-                        }
-                        
-                        worldOriginAnchor = update.anchor
-                        self.worldTrackingAddedOriginAnchor = true
-                    }
-                }
-                
-                if update.anchor.id == worldOriginAnchor.id {
-                    self.worldOriginAnchor = update.anchor
-                    
-                    // This seems to happen when headset is removed, or on app close.
-                    if !update.anchor.isTracked {
-                        // print("Headset removed?")
-                        //EventHandler.shared.handleHeadsetRemoved()
-                        //resetPlayspace()
-                        continue
-                    }
-                    
-                    let anchorTransform = update.anchor.originFromAnchorTransform
-                    if settings.keepSteamVRCenter {
-                        self.worldTrackingSteamVRTransform = anchorTransform
-                    }
-                    
-                    //Crown-press doesn't work for me?
-                    // Crown-press shenanigans
-                    if update.event == .updated {
-                        let sinceLast = update.timestamp - lastUpdatedTs
-                        if sinceLast < 3.0 && sinceLast > 0.5 {
-                            crownPressCount += 1
-                        }
-                        else {
-                            crownPressCount = 0
-                        }
-                        lastUpdatedTs = update.timestamp
-                        
-                        // Triple-press crown to purge nearby anchors and recenter
-                        if crownPressCount >= 2 {
-                            print("Reset world origin!")
-                            
-                            // Purge all existing world anchors within 3.5m
-                            for anchorPurge in worldAnchors {
-                                do {
-                                    if anchorDistanceFromOrigin(anchor: update.anchor) < 3.5 {
-                                        guard worldTracking.state == .running else { break }
-                                        try await worldTracking.removeAnchor(anchorPurge.value)
-                                    }
-                                }
-                                catch {
-                                    // don't care
-                                }
-                                worldAnchors.removeValue(forKey: anchorPurge.key)
-                            }
-                            
-                            let device = getDevice()
-                            if (device != nil) {
-                                //Use device for origin to track distance traveled
-                                self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: device!.originFromAnchorTransform)
-                            } else {
-                                self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: matrix_identity_float4x4)
-                            }
-                            self.worldTrackingAddedOriginAnchor = true
-                            if settings.keepSteamVRCenter {
-                                self.worldTrackingSteamVRTransform = anchorTransform
-                            }
-                            
-                            do {
-                                
-                                try await worldTracking.addAnchor(self.worldOriginAnchor)
-                            }
-                            catch {
-                                // don't care
-                            }
-                            
-                            crownPressCount = 0
-                        }
-                    }
-                }
-                
-            case .removed:
+         //       worldAnchors[anchor.id] = anchor
+//                if !self.worldTrackingAddedOriginAnchor {
+//                    print("Early origin anchor?", anchorDistanceFromOrigin(anchor: update.anchor), "Current Origin,", self.worldOriginAnchor.id)
+//                    
+//                    // If we randomly get an anchor added within 3.5m, consider that our origin
+//                    // What would randomly cause an ahcor
+//                    if anchorDistanceFromOrigin(anchor: update.anchor) < 3.5 {
+//                        print("Set new origin!")
+//                        
+//                        // This has a (positive) minor side-effect: all redundant anchors within 3.5m will get cleaned up,
+//                        // though which anchor gets chosen will be arbitrary.
+//                        // But there should only be one anyway.
+//                        
+//                        //Setup list of anchors similar to persistence manager to store only one Origin Anchor
+//                        do {
+//                            try await worldTracking.removeAnchor(self.worldOriginAnchor)
+//                        }
+//                        catch {
+//                            // don't care
+//                        }
+//                        
+//                        worldOriginAnchor = update.anchor
+//                        self.worldTrackingAddedOriginAnchor = true
+//                    }
+//                }
+//                
+//                if update.anchor.id == worldOriginAnchor.id {
+//                    self.worldOriginAnchor = update.anchor
+//                    
+//                    // This seems to happen when headset is removed, or on app close.
+//                    if !update.anchor.isTracked {
+//                        // print("Headset removed?")
+//                        //EventHandler.shared.handleHeadsetRemoved()
+//                        //resetPlayspace()
+//                        continue
+//                    }
+//                    
+//                    let anchorTransform = update.anchor.originFromAnchorTransform
+//                    if settings.keepSteamVRCenter {
+//                        self.worldTrackingSteamVRTransform = anchorTransform
+//                    }
+//                    
+//                    //Crown-press doesn't work for me?
+//                    // Crown-press shenanigans
+//                    if update.event == .updated {
+//                        let sinceLast = update.timestamp - lastUpdatedTs
+//                        if sinceLast < 3.0 && sinceLast > 0.5 {
+//                            crownPressCount += 1
+//                        }
+//                        else {
+//                            crownPressCount = 0
+//                        }
+//                        lastUpdatedTs = update.timestamp
+//                        
+//                        // Triple-press crown to purge nearby anchors and recenter
+//                        if crownPressCount >= 2 {
+//                            print("Reset world origin!")
+//                            
+//                            // Purge all existing world anchors within 3.5m
+//                            for anchorPurge in worldAnchors {
+//                                do {
+//                                    if anchorDistanceFromOrigin(anchor: update.anchor) < 3.5 {
+//                                        guard worldTracking.state == .running else { break }
+//                                        try await worldTracking.removeAnchor(anchorPurge.value)
+//                                    }
+//                                }
+//                                catch {
+//                                    // don't care
+//                                }
+//                                worldAnchors.removeValue(forKey: anchorPurge.key)
+//                            }
+//                            
+//                            let device = getDevice()
+//                            if (device != nil) {
+//                                //Use device for origin to track distance traveled
+//                                self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: device!.originFromAnchorTransform)
+//                            } else {
+//                                self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: matrix_identity_float4x4)
+//                            }
+//                            self.worldTrackingAddedOriginAnchor = true
+//                            if settings.keepSteamVRCenter {
+//                                self.worldTrackingSteamVRTransform = anchorTransform
+//                            }
+//                            
+//                            do {
+//                                
+//                                try await worldTracking.addAnchor(self.worldOriginAnchor)
+//                            }
+//                            catch {
+//                                // don't care
+//                            }
+//                            
+//                            crownPressCount = 0
+//                        }
+//                    }
+//                }
+            case .updated:
+                let origin = anchoredOrigins[anchor.id]
+                origin?.position = anchor.originFromAnchorTransform.translation
+                origin?.orientation = anchor.originFromAnchorTransform.rotation
+                origin?.isEnabled = anchor.isTracked
                 break
+            case .removed:
+                let origin = anchoredOrigins[anchor.id]
+                origin?.removeFromParent()
+                anchoredOrigins.removeValue(forKey: anchor.id)
             }
         }
     }
@@ -565,7 +821,7 @@ class WorldTracker {
             // Prevent audio crackling issues
             if sentPoses > 30 {
                 EventHandler.shared.handleHeadsetRemoved()
-                resetPlayspace()
+                //resetPlayspace()
             }
             return
         }

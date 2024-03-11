@@ -15,8 +15,8 @@ import ObjectiveC
 
 extension Renderer {
     
-    func startSimRenderLoop() {
-        Task {
+    func startSimRenderLoop(settings: GlobalSettings) {
+        
             let foveationVars = FoveationVars(
                 enabled: false,
                 targetEyeWidth: 0,
@@ -46,7 +46,84 @@ extension Renderer {
             renderThread.name = "Render Thread"
             renderThread.start()
         }
+    
+    
+    
+    func renderSimLoop() {
+        
+        layerRenderer.waitUntilRunning()
+        EventHandler.shared.renderStarted = true
+      //  EventHandler.shared.handleHeadsetRemovedOrReentry()
+       // var timeSinceLastLoop = CACurrentMediaTime()
+        while EventHandler.shared.renderStarted {
+            if layerRenderer.state == .invalidated {
+                print("Layer is invalidated")
+                //EventHandler.shared.stop()
+              //  EventHandler.shared.handleHeadsetRemovedOrReentry()
+             //   EventHandler.shared.handleHeadsetRemoved()
+             //   WorldTracker.shared.resetPlayspace()
+                //alvr_pause()
+
+                // visionOS sometimes sends these invalidated things really fkn late...
+                // But generally, we want to exit fully when the user exits.
+                
+                break
+            } else if layerRenderer.state == .paused {
+                layerRenderer.waitUntilRunning()
+                //EventHandler.shared.handleHeadsetRemovedOrReentry()
+                continue
+            } else {
+                autoreleasepool {
+                    self.renderSimFrame()
+                }
+            }
+        }
     }
+    
+    func renderSimFrame() {
+        /// Per frame updates hare
+        guard let frame = layerRenderer.queryNextFrame() else { return }
+        
+        frame.startUpdate()
+        
+        frame.endUpdate()
+        
+        guard let timing = frame.predictTiming() else { return }
+        LayerRenderer.Clock().wait(until: timing.optimalInputTime)
+
+        //LayerRenderer.Clock().wait(until: timing.optimalInputTime)
+        
+        guard let commandBuffer = commandQueue.makeCommandBuffer() else {
+            fatalError("Failed to create command buffer")
+        }
+        
+        guard let drawable = frame.queryDrawable() else { return }
+        
+        
+        _ = inFlightSemaphore.wait(timeout: DispatchTime.distantFuture)
+        
+        frame.startSubmission()
+        
+        if drawable.deviceAnchor == nil {
+            
+            let time = LayerRenderer.Clock.Instant.epoch.duration(to: drawable.frameTiming.presentationTime).timeInterval
+            world.sendTracking(targetTimestamp: time)
+            drawable.deviceAnchor = world.queryDevice(time)
+        }
+        
+        let semaphore = inFlightSemaphore
+        commandBuffer.addCompletedHandler { (_ commandBuffer)-> Swift.Void in
+            semaphore.signal()
+        }
+        
+        
+        renderLobby(drawable: drawable, commandBuffer: commandBuffer)
+        
+        drawable.encodePresent(commandBuffer: commandBuffer)
+        commandBuffer.commit()
+        frame.endSubmission()
+    }
+    
     
     func renderLobby(drawable: LayerRenderer.Drawable, commandBuffer: MTLCommandBuffer) {
         self.updateDynamicBufferState()
@@ -132,116 +209,48 @@ extension Renderer {
         guard world.worldTracking.state == .running else { return }
         //let anchorDistance = WorldTracker.shared.deviceDistanceFromAnchor()
         Task {
-            //await WorldTracker.shared.processWorldTrackingUpdates()
-        }
-        let worldAnchorDistance = world.anchorDistanceFromOrigin(anchor: world.worldOriginAnchor)
-        let device = world.getDevice()
-        let distanceFromCenter = world.deviceDistanceFromCenter(anchor: device!)
-        //EventHandler.shared.updateAnchorDistance(anchorDistance)
-        EventHandler.shared.updateWorldAnchorDistance(worldAnchorDistance)
-        EventHandler.shared.updateDistanceFromCenter(distanceFromCenter)
-        let rotationAxis = SIMD3<Float>(1, 1, 0)
-        let modelRotationMatrix = matrix4x4_rotation(radians: rotation, axis: rotationAxis)
-        let modelTranslationMatrix = matrix4x4_translation(0.0, 0.0, -8.0)
-        let modelMatrix = modelTranslationMatrix * modelRotationMatrix
-        
-        let simdDeviceAnchor = device?.originFromAnchorTransform ?? matrix_identity_float4x4
-
-        func uniforms(forViewIndex viewIndex: Int) -> Uniforms {
-            let view = drawable.views[viewIndex]
-            let viewMatrix = simdDeviceAnchor
-            let viewMatrixFrame = simdDeviceAnchor
-            let projection = ProjectiveTransform3D(leftTangent: Double(view.tangents[0]),
-                                                   rightTangent: Double(view.tangents[1]),
-                                                   topTangent: Double(view.tangents[2]),
-                                                   bottomTangent: Double(view.tangents[3]),
-                                                   nearZ: Double(drawable.depthRange.y),
-                                                   farZ: Double(drawable.depthRange.x),
-                                                   reverseZ: true)
-            
-            return Uniforms(projectionMatrix: .init(projection),  modelViewMatrix: viewMatrix, tangents: view.tangents)
-        }
-        
-        self.uniforms[0].uniforms.0 = uniforms(forViewIndex: 0)
-        if drawable.views.count > 1 {
-            self.uniforms[0].uniforms.1 = uniforms(forViewIndex: 1)
-        }
-        
-        rotation += 0.01
-    }
-    
-    func renderSimFrame() {
-        /// Per frame updates hare
-        guard let frame = layerRenderer.queryNextFrame() else { return }
-        
-        frame.startUpdate()
-        
-        frame.endUpdate()
-        
-        guard let timing = frame.predictTiming() else { return }
-        LayerRenderer.Clock().wait(until: timing.optimalInputTime)
-
-        //LayerRenderer.Clock().wait(until: timing.optimalInputTime)
-        
-        guard let commandBuffer = commandQueue.makeCommandBuffer() else {
-            fatalError("Failed to create command buffer")
-        }
-        
-        guard let drawable = frame.queryDrawable() else { return }
-        
-        
-        _ = inFlightSemaphore.wait(timeout: DispatchTime.distantFuture)
-        
-        frame.startSubmission()
-        
-        if drawable.deviceAnchor == nil {
-            
-            let time = LayerRenderer.Clock.Instant.epoch.duration(to: drawable.frameTiming.presentationTime).timeInterval
-            world.sendTracking(targetTimestamp: time)
-            drawable.deviceAnchor = world.queryDevice(time)
-        }
-        
-        let semaphore = inFlightSemaphore
-        commandBuffer.addCompletedHandler { (_ commandBuffer)-> Swift.Void in
-            semaphore.signal()
-        }
-        
-        
-        renderLobby(drawable: drawable, commandBuffer: commandBuffer)
-        
-        drawable.encodePresent(commandBuffer: commandBuffer)
-        commandBuffer.commit()
-        frame.endSubmission()
-    }
-    
-    func renderSimLoop() {
-        layerRenderer.waitUntilRunning()
-        EventHandler.shared.renderStarted = true
-      //  EventHandler.shared.handleHeadsetRemovedOrReentry()
-       // var timeSinceLastLoop = CACurrentMediaTime()
-        while EventHandler.shared.renderStarted {
-            if layerRenderer.state == .invalidated {
-                print("Layer is invalidated")
-                //EventHandler.shared.stop()
-              //  EventHandler.shared.handleHeadsetRemovedOrReentry()
-             //   EventHandler.shared.handleHeadsetRemoved()
-             //   WorldTracker.shared.resetPlayspace()
-                //alvr_pause()
-
-                // visionOS sometimes sends these invalidated things really fkn late...
-                // But generally, we want to exit fully when the user exits.
+            if let device = world.getDevice() {
+                let distanceFromCenter = world.deviceDistanceFromCenter(anchor: device)
+                EventHandler.shared.updateDistanceFromCenter(distanceFromCenter)
                 
-                break
-            } else if layerRenderer.state == .paused {
-                layerRenderer.waitUntilRunning()
-                //EventHandler.shared.handleHeadsetRemovedOrReentry()
-                continue
-            } else {
-                autoreleasepool {
-                    self.renderSimFrame()
+                let anchorDistance = world.deviceDistanceFromAnchor(anchor: device)
+                EventHandler.shared.updateAnchorDistance(anchorDistance)
+                
+                let worldAnchorDistance = world.anchorDistanceFromOrigin(anchor: world.worldOriginAnchor)
+                EventHandler.shared.updateWorldAnchorDistance(worldAnchorDistance)
+
+                let rotationAxis = SIMD3<Float>(1, 1, 0)
+                let modelRotationMatrix = matrix4x4_rotation(radians: rotation, axis: rotationAxis)
+                let modelTranslationMatrix = matrix4x4_translation(0.0, 0.0, -8.0)
+                let modelMatrix = modelTranslationMatrix * modelRotationMatrix
+                
+                let simdDeviceAnchor = device.originFromAnchorTransform
+
+                func uniforms(forViewIndex viewIndex: Int) -> Uniforms {
+                    let view = drawable.views[viewIndex]
+                    let viewMatrix = simdDeviceAnchor
+                    let viewMatrixFrame = simdDeviceAnchor
+                    let projection = ProjectiveTransform3D(leftTangent: Double(view.tangents[0]),
+                                                           rightTangent: Double(view.tangents[1]),
+                                                           topTangent: Double(view.tangents[2]),
+                                                           bottomTangent: Double(view.tangents[3]),
+                                                           nearZ: Double(drawable.depthRange.y),
+                                                           farZ: Double(drawable.depthRange.x),
+                                                           reverseZ: true)
+                    
+                    return Uniforms(projectionMatrix: .init(projection),  modelViewMatrix: viewMatrix, tangents: view.tangents)
                 }
+                
+                self.uniforms[0].uniforms.0 = uniforms(forViewIndex: 0)
+                if drawable.views.count > 1 {
+                    self.uniforms[0].uniforms.1 = uniforms(forViewIndex: 1)
+                }
+                
+                rotation += 0.01
+
             }
         }
+        
     }
     
     // Generic matrix math utility functions

@@ -17,9 +17,13 @@ import QuartzCore
 extension EventHandler {
     func handleSimEvents() {
         while inputRunning {
-            autoreleasepool {
-                 self.renderSimFrame()
-            }
+//            Task {
+                //Using real render sim frame now
+              //  try? await Task.sleep(nanoseconds: 1 * 1_000_000_000)
+                            autoreleasepool {
+                                 self.renderSimFrame()
+                            }
+//            }
         }
     }
     
@@ -76,6 +80,7 @@ extension EventHandler {
     }
     
     @MainActor
+    //This is cool
     func run(function: () async -> Void, withFrequency hz: UInt64) async {
         while true {
             if Task.isCancelled {
@@ -95,55 +100,5 @@ extension EventHandler {
         }
     }
     
-    @MainActor
-    func updatePlacementLocation(_ deviceAnchor: DeviceAnchor) async {
-        deviceLocation.transform = Transform(matrix: deviceAnchor.originFromAnchorTransform)
-        print("Device location transformed")
-    }
-    
-    @MainActor
-    func select(_ origin: ImmersionOrigin?) {
-        
-        // But will this actually select?
-        placementState.selectedOrigin = origin
-    //    appState?.selectedFileName = origin?.descriptor.fileName
-//        
-//        if let origin {
-//            // Add new preview entity.
-//            placementLocation.addChild(origin.previewEntity)
-//        }
-    }
-    
-    @MainActor
-    func getOrigin() {
-        let object = placeableOriginsByFileName["Scene"]
-        select(object)
-    }
-    
-    @MainActor
-    func placeSelectedOrigin(_ deviceAnchor: DeviceAnchor) {
-        // Ensure there’s a placeable origin.
-        self.getOrigin()
-        
-        guard let originToPlace = placementState.originToPlace else {
-            print("No originToPlace")
-            return }
-
-        // Using device location's entity placement and location for now
-        // Will need to update to not use Entity if possible
-        let origin = originToPlace.materialize(Date())
-//        origin.position = placementLocation.position
-//        origin.orientation = placementLocation.orientation
-        origin.position = deviceLocation.position
-        origin.orientation = deviceLocation.orientation
-        print("Device pos: \(deviceLocation.position)")
-        print("Device ori: \(deviceLocation.orientation)")
-        print("Origin pos: \(origin.position)")
-        print("Origin ori: \(origin.orientation)")
-        
-//        Task {
-//            await persistenceManager.attachOriginToWorldAnchor(origin)
-//        }
-        placementState.userPlacedAnOrigin = true
-    }    
+     
 }

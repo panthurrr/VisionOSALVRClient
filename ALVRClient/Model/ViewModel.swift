@@ -10,6 +10,8 @@ class ViewModel {
     // Client
     var isShowingClient: Bool = false
     
+    var immersiveSpaceID: String = "Mixed"
+    
     var isDebugMode: Bool = true
     
     var isShowingDebugWindow: Bool = false

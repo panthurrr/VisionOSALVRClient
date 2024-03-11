@@ -79,7 +79,9 @@ struct Entry: View {
             } //End VStack2
             .zIndex(0)
             if (model.isShowingDebugWindow) {
-                Debug()
+                Debug(
+                    settings: $settings, modelDescriptors: eventHandler.modelDescriptors
+                )
                     .frame(width: 600, height: 400)
                     .frame(depth: 20.0)
                     .glassBackgroundEffect()

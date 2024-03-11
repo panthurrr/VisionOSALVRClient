@@ -11,6 +11,7 @@ import ARKit
 import VideoToolbox
 import ObjectiveC
 import SwiftUI
+import RealityKit
 
 // The 256 byte aligned size of our uniform structure
 let alignedUniformsSize = (MemoryLayout<UniformsArray>.size + 0xFF) & -0x100
@@ -75,8 +76,8 @@ class Renderer {
 
     var mesh: MTKMesh
     
-    let world = WorldTracker()
-    let event = EventHandler.shared
+    let world: WorldTracker
+    let events = EventHandler.shared
     let layerRenderer: LayerRenderer
     // TODO(zhuowei): make this a real deque
     var metalTextureCache: CVMetalTextureCache!
@@ -90,6 +91,8 @@ class Renderer {
         self.device = layerRenderer.device
         self.commandQueue = self.device.makeCommandQueue()!
 
+        self.world = events.world
+        
         let uniformBufferSize = alignedUniformsSize * maxBuffersInFlight
         self.dynamicUniformBuffer = self.device.makeBuffer(length:uniformBufferSize,
                                                            options:[MTLResourceOptions.storageModeShared])!

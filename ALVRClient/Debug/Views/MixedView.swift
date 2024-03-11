@@ -14,41 +14,51 @@ import ARKit
 struct MixedView: View {
     @Binding var settings: GlobalSettings
     
-    @State private var placementManager = PlacementManager()
+   // @State private var placementManager = PlacementManager()
     @State private var events = EventHandler.shared
     
     var body: some View {
         RealityView { content in
-            if let scene = try? await Entity(named: "Immersive") {
-                content.add(scene)
-            }
-            content.add(events.rootEntity)
+//            if let scene = try? await Entity(named: "Immersive") {
+//                content.add(scene)
+//            }
+            //Most likely needing to change THIS rootEntity to a new one each time
+            
+            content.add(events.world.rootEntity)
+            
             Task {
-                await placementManager.runARKitSession()
+                await events.world.runARKitSession()
             }
             
             //Run ARKit session after opened Immersive Space?
             
         }
         .task {
-            await events.world.initializeAr(arSession:events.arkitSession,
+          // events.reset()
+        }
+        .task {
+            await events.world.initializeAr(arSession:ARKitSession(),
                                       worldTracking: WorldTrackingProvider(),
-                                      handTracking:events.handTracking,
+                                      handTracking:HandTrackingProvider(),
                                       sceneReconstruction:SceneReconstructionProvider(),
                                       planeDetection:PlaneDetectionProvider(),
                                       settings:settings)
         }
         .task {
-            // Remove all anchors
-            // await WorldTracker.shared.removeAllAnchors()
+            await events.world.processWorldTrackingUpdates()
         }
+        .task {
+            await events.world.processDeviceAnchorUpdates()
+        }
+        .task {
+       //     events.world.removeAllAnchors()
+          //  await events.world.deleteAnchorsForAnchoredOrigins()
+
+        }
+//        .onAppear() {
+//            events.immersiveSpaceOpened(with: placementManager)
+//        }
         
-        //PlacementManager logic paths
-        //Process world anchorupdates
-        //process devic anchorupdates
-        //process planedetec updates
-        //checkIfAnchoredObejctsNeedDetached
-        //checkIfMovingObjectsCanBeAnchored
     }
 
 }

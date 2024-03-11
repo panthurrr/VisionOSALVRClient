@@ -87,7 +87,7 @@ class PlacedOrigin: Entity {
     var atRest = false
     
     init(descriptor: ModelDescriptor, renderContentToClone: ModelEntity, shapes: [ShapeResource], date: Date) {
-        fileName = "Scene" //descriptor.fileName
+        fileName = "Cone" //descriptor.fileName
         self.date = date
         renderContent = renderContentToClone.clone(recursive: true)
         super.init()

@@ -2,7 +2,7 @@
 See the LICENSE.txt file for this sample’s licensing information.
 
 Abstract:
-The class that loads available USDAs and reports loading progress.
+The class that loads available usdzs and reports loading progress.
 */
 
 import Foundation
@@ -41,23 +41,23 @@ final class ModelLoader {
         guard !didStartLoading else { return }
         didStartLoading.toggle()
 
-        // Get a list of all USDA files in this app’s main bundle and attempt to load them.
-        var usdaFiles: [String] = []
+        // Get a list of all usdz files in this app’s main bundle and attempt to load them.
+        var usdzFiles: [String] = []
         if let resourcesPath = Bundle.main.resourcePath {
             print("ResouresPath: \(resourcesPath)")
-            try? usdaFiles = FileManager.default.contentsOfDirectory(atPath: resourcesPath).filter { $0.hasSuffix(".usda") }
+            try? usdzFiles = FileManager.default.contentsOfDirectory(atPath: resourcesPath).filter { $0.hasSuffix(".usdz") }
         }
         
-        for string in usdaFiles {
-            print("USDA FILE: \(string)")
+        for string in usdzFiles {
+            print("usdz FILE: \(string)")
         }
         
-        assert(!usdaFiles.isEmpty, "Add USDA files to the '3D models' group of this Xcode project.")
+        assert(!usdzFiles.isEmpty, "Add usdz files to the '3D models' group of this Xcode project.")
         
-        fileCount = usdaFiles.count
+        fileCount = usdzFiles.count
         await withTaskGroup(of: Void.self) { group in
-            for usda in usdaFiles {
-                let fileName = URL(string: usda)!.deletingPathExtension().lastPathComponent
+            for usdz in usdzFiles {
+                let fileName = URL(string: usdz)!.deletingPathExtension().lastPathComponent
                 group.addTask {
                     await self.loadObject(fileName)
                     await self.updateProgress()
@@ -70,10 +70,10 @@ final class ModelLoader {
         var modelEntity: ModelEntity
         var previewEntity: Entity
         do {
-            // Load the USDA as a ModelEntity.
+            // Load the usdz as a ModelEntity.
             try await modelEntity = ModelEntity(named: fileName)
             
-            // Load the USDA as a regular Entity for previews.
+            // Load the usdz as a regular Entity for previews.
             try await previewEntity = Entity(named: fileName)
             previewEntity.name = "Preview of \(modelEntity.name)"
         } catch {

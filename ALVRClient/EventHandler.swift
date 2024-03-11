@@ -9,6 +9,7 @@ import Combine
 import AVKit
 import ARKit
 import RealityKit
+//import SwiftUI
 
 class EventHandler: ObservableObject {
     static let shared = EventHandler()
@@ -19,6 +20,9 @@ class EventHandler: ObservableObject {
     var alvrInitialized = false
     var streamingActive = false
     
+  ////  @Environment(\.openImmersiveSpace) private var openImmersiveSpace
+ //   @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
+
     
     @Published var connectionState: ConnectionState = .disconnected
     @Published var hostname: String = ""
@@ -27,6 +31,7 @@ class EventHandler: ObservableObject {
     @Published var distanceFromAnchor: Float = 0
     @Published var distanceFromWorldAnchor: Float = 0
     @Published var distanceFromCenter: Float = 0
+    
     
     var debugMode = true
     
@@ -38,16 +43,20 @@ class EventHandler: ObservableObject {
     var timer: Timer?
     var placeableOriginsByFileName: [String: ImmersionOrigin] = [:]
     private(set) var modelDescriptors: [ModelDescriptor] = []
+    
+ //   private(set) var placementManager: PlacementManager? = nil
 
+   // var placementManager = PlacementManager()
     var placementState = PlacementState()
-    let placementLocation = Entity()
-    let deviceLocation = Entity()
-
-    var rootEntity = Entity()
+    var isRecentering = false
+//    let updateSem = DispatchSemaphore(value: 1)
+    var selectedFileName = "Cone"
+    
+    var rootEntity: Entity
         
-    let world = WorldTracker()
+    var world: WorldTracker
     var arkitSession = ARKitSession()
-    var handTracking = HandTrackingProvider()
+   // var handTracking = HandTrackingProvider()
     
     var inputRunning = false
     var vtDecompressionSession:VTDecompressionSession? = nil
@@ -78,10 +87,28 @@ class EventHandler: ObservableObject {
     var timeLastFrameSent: Double = 0.0
     var numberOfEventThreadRestarts: Int = 0
     
-    init() {}
+    init() {
+        //Do i need to move this in another class?  Maybe in world tracker
+        let root = Entity()
+        rootEntity = root
+        
+        world = WorldTracker(rootEntity: root)
+        
+        //Load persisted objects
+        world.loadPersistedOrigins()
     
+        rootEntity.addChild(world.placementLocation)
+        
+        
+    }
+    
+    @MainActor
     func initializeAlvr() {
         fixAudioForDirectStereo()
+        
+        if let model = world.placeableOriginsByFileName["Cone"] {
+            world.select(model)
+        }
         if !alvrInitialized {
             print("Initialize ALVR")
             alvrInitialized = true
@@ -95,6 +122,7 @@ class EventHandler: ObservableObject {
             }
         }
     }
+    
     
     func start() {
     
@@ -116,6 +144,23 @@ class EventHandler: ObservableObject {
             eventsWatchThread?.name = "Events Watchdog Thread"
             eventsWatchThread?.start()
         }
+    }
+    
+    func reset() {
+        world.stopArSession()
+        let root = Entity()
+        rootEntity = root
+     //   placementLocation = Entity()
+     //   deviceLocation = Entity()
+        
+        //Can't make a new world tracker? Would be easier
+        world.updateRootEntity(rootEntity: root)
+        
+        //Load persisted objects
+        world.loadPersistedOrigins()
+        
+        world.rootEntity.addChild(world.placementLocation)
+
     }
     
     func stop() {
@@ -470,16 +515,60 @@ class EventHandler: ObservableObject {
         }
     }
     
+    //Will this be needed later or ignorable
     func setPlaceableObjects(_ objects: [ImmersionOrigin]) {
-        placeableOriginsByFileName = objects.reduce(into: [:]) { map, placeableObject in
+        world.placeableOriginsByFileName = objects.reduce(into: [:]) { map, placeableObject in
             map[placeableObject.descriptor.fileName] = placeableObject
         }
-
+        
         // Sort descriptors alphabetically.
         modelDescriptors = objects.map { $0.descriptor }.sorted { lhs, rhs in
             lhs.displayName < rhs.displayName
         }
-   }
+    }
+    
+    
+//    func openingImmersiveSpace() {
+//        Task {
+//            print("Opening Immersive Space")
+//            self.alvrInitialized = true
+//            await openImmersiveSpace(id: "Mixed")
+//            self.streamingActive = true
+//            self.world.resetPlayspace()
+//            self.world.setCenter()
+//        }
+//    }
+//    
+//    func dismissingImmersiveSpace() {
+//        Task {
+//            print("Manual dismiss Immersive Space")
+//            self.alvrInitialized = false
+//            self.streamingActive = true
+//            await dismissImmersiveSpace()
+//            self.world.stopArSession()
+//        }
+//    }
+//    
+//    func recenterImmersiveSpace() {
+//        if updateSem.wait(timeout: .now()) == .success {
+//            Task {
+//                self.isRecentering = true
+//                print("Resetting playspace")
+//                self.world.resetPlayspace()
+//                self.streamingActive = false
+//                print("Recenter dismiss immersive space")
+//                await dismissImmersiveSpace()
+//                self.placementManager.saveOriginAnchorsOriginsMapToDisk()
+//                await openImmersiveSpace(id: "Mixed")
+//                self.alvrInitialized = true
+//                self.streamingActive = true
+//                try? await Task.sleep(nanoseconds: 1 * 1_000_000_000)
+//                self.world.resetPlayspace()
+//                self.world.setCenter()
+//            }
+//            updateSem.signal()
+//        }
+//    }
 
 }
 

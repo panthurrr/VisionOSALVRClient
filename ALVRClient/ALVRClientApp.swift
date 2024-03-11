@@ -56,7 +56,9 @@ struct MetalRendererApp: App {
                 model.isShowingClient = false
                 EventHandler.shared.initializeAlvr()
 //                await WorldTracker.shared.initializeAr(settings: gStore.settings)
-                EventHandler.shared.simStart()
+                if (model.immersiveSpaceID == "Mixed") {
+                    EventHandler.shared.simStart()
+                }
                 //EventHandler.shared.start()
             }
             .task {
@@ -108,7 +110,9 @@ struct MetalRendererApp: App {
         }
         
         WindowGroup(id: "Debug") {
-            Debug()
+            Debug(
+                settings: $gStore.settings, modelDescriptors: EventHandler.shared.modelDescriptors
+            )
                 .environment(model)
                 .coordinateSpace(name: "Name")
                // .distortionEffect(Shader, maxSampleOffset: CGSizeZero, isEnabled: true)
@@ -130,7 +134,7 @@ struct MetalRendererApp: App {
         ImmersiveSpace(id: "SimClient") {
             CompositorLayer(configuration: ContentStageConfiguration()) { layerRenderer in
                 let renderer = Renderer(layerRenderer)
-                renderer.startSimRenderLoop()
+                renderer.startSimRenderLoop(settings: gStore.settings)
             }
         }
         .immersionStyle(selection: $clientImmersionStyle, in: .full)
