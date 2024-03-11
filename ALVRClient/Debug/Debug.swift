@@ -145,6 +145,7 @@ struct Debug: View {
     func openingImmersiveSpace() {
         Task {
             if (model.immersiveSpaceID != "Mixed") {
+                print("Initialize via Debug page")
                 await events.world.initializeAr(arSession:ARKitSession(),
                                                 worldTracking: WorldTrackingProvider(),
                                                 handTracking:HandTrackingProvider(),
@@ -157,8 +158,8 @@ struct Debug: View {
             events.alvrInitialized = true
             await openImmersiveSpace(id: model.immersiveSpaceID)
             events.streamingActive = true
-        //    events.world.resetPlayspace()
             try? await Task.sleep(nanoseconds: 1 * 1_000_000_000)
+            events.world.resetPlayspace()
             events.world.setCenter()
         }
     }

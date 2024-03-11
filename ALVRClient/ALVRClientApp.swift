@@ -55,11 +55,14 @@ struct MetalRendererApp: App {
                 }
                 model.isShowingClient = false
                 EventHandler.shared.initializeAlvr()
-//                await WorldTracker.shared.initializeAr(settings: gStore.settings)
+              // await WorldTracker.shared.initializeAr(settings: gStore.settings)
                 if (model.immersiveSpaceID == "Mixed") {
+                    print("Mixed immersion")
                     EventHandler.shared.simStart()
+                } else {
+                    print("Normal start")
+                    EventHandler.shared.start()
                 }
-                //EventHandler.shared.start()
             }
             .task {
                 await modelLoader.loadObjects()

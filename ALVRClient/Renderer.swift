@@ -347,6 +347,18 @@ class Renderer {
     private func updateGameStateForVideoFrame(drawable: LayerRenderer.Drawable, framePose: simd_float4x4) {
         let simdDeviceAnchor = drawable.deviceAnchor != nil ? drawable.deviceAnchor!.originFromAnchorTransform : matrix_identity_float4x4
         
+        if let device = world.getDevice() {
+            let distanceFromCenter = world.deviceDistanceFromCenter(anchor: device)
+            EventHandler.shared.updateDistanceFromCenter(distanceFromCenter)
+            
+            let anchorDistance = world.deviceDistanceFromAnchor(anchor: device)
+            EventHandler.shared.updateAnchorDistance(anchorDistance)
+            
+            let worldAnchorDistance = world.anchorDistanceFromOrigin(anchor: world.worldOriginAnchor)
+            EventHandler.shared.updateWorldAnchorDistance(worldAnchorDistance)
+        }
+        
+        
         func uniforms(forViewIndex viewIndex: Int) -> Uniforms {
             let view = drawable.views[viewIndex]
             
@@ -517,7 +529,8 @@ class Renderer {
             // Don't show frame if we haven't sent the view config and received frames
             // with that config applied.
             frameIsSuitableForDisplaying = false
-            print("IPD is bad, no frame")
+            
+         //   print("IPD is bad, no frame")
         }
         if !world.worldTrackingAddedOriginAnchor && EventHandler.shared.framesRendered < 300 {
             // Don't show frame if we haven't figured out our origin yet.
@@ -869,16 +882,16 @@ class Renderer {
     
     func renderLoop() {
         layerRenderer.waitUntilRunning()
-        EventHandler.shared.handleHeadsetRemovedOrReentry()
+   //     EventHandler.shared.handleHeadsetRemovedOrReentry()
         var timeSinceLastLoop = CACurrentMediaTime()
         while EventHandler.shared.renderStarted {
             if layerRenderer.state == .invalidated {
                 print("Layer is invalidated")
                 //EventHandler.shared.stop()
-                EventHandler.shared.handleHeadsetRemovedOrReentry()
-                EventHandler.shared.handleHeadsetRemoved()
+          //      EventHandler.shared.handleHeadsetRemovedOrReentry()
+           //     EventHandler.shared.handleHeadsetRemoved()
                 world.resetPlayspace()
-                alvr_pause()
+            //    alvr_pause()
 
                 // visionOS sometimes sends these invalidated things really fkn late...
                 // But generally, we want to exit fully when the user exits.

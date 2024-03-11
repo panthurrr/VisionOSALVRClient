@@ -26,6 +26,7 @@ class WorldTracker {
     let originDatabaseFileName: String = "persistentOrigins.json"
     var persistedOriginFileNamePerAnchor: [UUID: OriginData] = [:]
     var placeableOriginsByFileName: [String: ImmersionOrigin] = [:]
+  /// var latestOrigin: UUID
     
     var placementState = PlacementState()
     var placementLocation: Entity
@@ -123,8 +124,9 @@ class WorldTracker {
         print("Reset playspace")
         // Reset playspace state
         self.worldTrackingAddedOriginAnchor = false
-        self.worldTrackingSteamVRTransform = getDeviceOriginFromTransform()
-        self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: getDeviceOriginFromTransform())
+        let transform = getDeviceOriginFromTransform()
+        self.worldTrackingSteamVRTransform = transform
+        self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: transform)
         self.lastUpdatedTs = 0
         self.crownPressCount = 0
         self.sentPoses = 0
@@ -158,7 +160,7 @@ class WorldTracker {
         }
         self.settings = settings
         loadPersistedOrigins()
-//        resetPlayspace()
+        resetPlayspace()
     }
     
     @MainActor
@@ -265,8 +267,12 @@ class WorldTracker {
             Task {
                 await updatePlacementLocation(deviceAnchor)
                 await placeSelectedOrigin(deviceAnchor)
+                
             }
             self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: transform)
+//            self.worldTrackingSteamVRTransform =
+            self.worldTrackingAddedOriginAnchor = true
+
         }
     }
     
@@ -355,7 +361,7 @@ class WorldTracker {
         
         let distanceFromDeviceAnchor: Float = 0.5
         let downwardsOffset: Float = 0.3
-        //Haven't grok'd this var set
+        
         var uprightDeviceAnchorFromOffsetTransform = matrix_identity_float4x4
         uprightDeviceAnchorFromOffsetTransform.translation = [0, -downwardsOffset, -distanceFromDeviceAnchor]
         let originFromOffsetTransform = originFromUprightDeviceAnchorTransform * uprightDeviceAnchorFromOffsetTransform
@@ -525,6 +531,7 @@ Remove old origins before placing new ones.
                     // Now that the anchor has been successfully added, display the object.
                     EventHandler.shared.rootEntity.addChild(originBeingAnchored)
                     //Only display object once added to rootEntity
+                    self.worldTrackingSteamVRTransform = anchor.originFromAnchorTransform
                 } else {
                     if anchoredOrigins[anchor.id] == nil {
                         Task {
@@ -534,6 +541,7 @@ Remove old origins before placing new ones.
                         }
                     }
                 }
+                
                 fallthrough
 //            case .updated:
                 // This checks every world anchor
@@ -644,10 +652,15 @@ Remove old origins before placing new ones.
 //                    }
 //                }
             case .updated:
+                if anchor.id == worldOriginAnchor.id {
+                    self.worldOriginAnchor = anchor
+                    self.worldTrackingAddedOriginAnchor = true
+                }
                 let origin = anchoredOrigins[anchor.id]
                 origin?.position = anchor.originFromAnchorTransform.translation
                 origin?.orientation = anchor.originFromAnchorTransform.rotation
                 origin?.isEnabled = anchor.isTracked
+                
                 break
             case .removed:
                 let origin = anchoredOrigins[anchor.id]
@@ -832,9 +845,10 @@ Remove old origins before placing new ones.
         //
         // That aside, if we add an anchor at (0,0,0), we will get reports in processWorldTrackingUpdates()
         // every time the user recenters.
+        // Is this necessary with setCenter()
         if !self.worldTrackingAddedOriginAnchor && sentPoses > 300 {
             self.worldTrackingAddedOriginAnchor = true
-            
+            print("SendTracking based update")
             Task {
                 do {
                     try await worldTracking.addAnchor(self.worldOriginAnchor)

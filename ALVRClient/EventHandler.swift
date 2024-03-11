@@ -102,27 +102,25 @@ class EventHandler: ObservableObject {
         
     }
     
-    @MainActor
     func initializeAlvr() {
         fixAudioForDirectStereo()
-        
-        if let model = world.placeableOriginsByFileName["Cone"] {
-            world.select(model)
-        }
+//        
+//        if let model = world.placeableOriginsByFileName["Cone"] {
+//            world.select(model)
+//        }
         if !alvrInitialized {
             print("Initialize ALVR")
             alvrInitialized = true
             let refreshRates:[Float] = [100, 90]
-            if (!debugMode) {
+            if (debugMode) {
                 print("Real Init")
                 alvr_initialize(/*java_vm=*/nil, /*context=*/nil, UInt32(1920*2), UInt32(1824*2), refreshRates, Int32(refreshRates.count), /*supports_foveated_encoding=*/true, /*external_decoder=*/ true)
                 alvr_resume()
             } else {
-                print("Debug")
+                print("Debug, not using real Init")
             }
         }
     }
-    
     
     func start() {
     
@@ -362,7 +360,7 @@ class EventHandler: ObservableObject {
                 handlePeriodicUpdatedValues()
             }
             
-            #if false
+            #if true
             if (timeLastAlvrEvent != 0 && timeLastFrameGot != 0 && (currentTime - timeLastAlvrEvent >= 5.0 || currentTime - timeLastFrameGot >= 5.0))
                || (renderStarted && timeLastFrameSent != 0 && (currentTime - timeLastFrameSent >= 5.0)) {
                 EventHandler.shared.updateConnectionState(.disconnected)
@@ -371,6 +369,7 @@ class EventHandler: ObservableObject {
                 stop()
                 alvrInitialized = false
                 alvr_destroy()
+                print("Reinitialize ALVR")
                 initializeAlvr()
                 
                 timeLastAlvrEvent = CACurrentMediaTime()
