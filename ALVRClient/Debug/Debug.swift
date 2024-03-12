@@ -119,7 +119,7 @@ struct Debug: View {
             //Reset immersive space
             .onChange(of: events.distanceFromCenter) { _, newValue in
                 DispatchQueue.main.async {
-                    if model.isShowingSimClient && model.enableRecenter && newValue > 0.2 && !events.isRecentering {
+                    if model.isShowingSimClient && model.enableRecenter && newValue > settings.recenterDistance && !events.isRecentering {
                         if updateSem.wait(timeout: .now()) == .success {
                             recenterImmersiveSpace()
                             updateSem.signal()

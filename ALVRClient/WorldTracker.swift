@@ -142,6 +142,7 @@ class WorldTracker {
         self.planeDetection = planeDetection
         //self.placementManager = PlacementManager()
         print("Init AR succ")
+        self.settings = settings
         Task {
             await processReconstructionUpdates()
         }
@@ -150,7 +151,11 @@ class WorldTracker {
         }
         Task {
             //Only not doing this because mixed view passes this task in
-            await processWorldTrackingUpdates()
+            if settings.autoRecenter {
+                await processWorldTrackingUpdatesRecentering()
+            } else {
+                await processWorldTrackingUpdates()
+            }
         }
         Task {
             await processHandTrackingUpdates()
@@ -158,7 +163,6 @@ class WorldTracker {
         Task {
             //await processDeviceAnchorUpdates()
         }
-        self.settings = settings
         loadPersistedOrigins()
         resetPlayspace()
     }
@@ -504,8 +508,106 @@ Remove old origins before placing new ones.
     
     // We have an origin anchor which we use to maintain SteamVR's positions
     // every time visionOS's centering changes.
-    @MainActor
     func processWorldTrackingUpdates() async {
+        for await update in worldTracking.anchorUpdates {
+            print(update.event, update.anchor.id, update.anchor.description, update.timestamp)
+            
+            switch update.event {
+            case .added, .updated:
+                worldAnchors[update.anchor.id] = update.anchor
+                if !self.worldTrackingAddedOriginAnchor {
+                      print("Early origin anchor?", anchorDistanceFromOrigin(anchor: update.anchor), "Current Origin,", self.worldOriginAnchor.id)
+                      
+                      // If we randomly get an anchor added within 3.5m, consider that our origin
+                      if anchorDistanceFromOrigin(anchor: update.anchor) < 3.5 {
+                          print("Set new origin!")
+                          
+                          // This has a (positive) minor side-effect: all redundant anchors within 3.5m will get cleaned up,
+                          // though which anchor gets chosen will be arbitrary.
+                          // But there should only be one anyway.
+                          do {
+                              try await worldTracking.removeAnchor(self.worldOriginAnchor)
+                          }
+                          catch {
+                              // don't care
+                          }
+                      
+                          worldOriginAnchor = update.anchor
+                          self.worldTrackingAddedOriginAnchor = true
+                      }
+                  }
+                  
+                  if update.anchor.id == worldOriginAnchor.id {
+                      self.worldOriginAnchor = update.anchor
+                      
+                      // This seems to happen when headset is removed, or on app close.
+                      if !update.anchor.isTracked {
+                          print("Headset removed?")
+                          //EventHandler.shared.handleHeadsetRemoved()
+                          //resetPlayspace()
+                          continue
+                      }
+
+                      let anchorTransform = update.anchor.originFromAnchorTransform
+                      if settings.keepSteamVRCenter {
+                          self.worldTrackingSteamVRTransform = anchorTransform
+                      }
+                      
+                      // Crown-press shenanigans
+                      if update.event == .updated {
+                          let sinceLast = update.timestamp - lastUpdatedTs
+                          if sinceLast < 1.5 && sinceLast > 0.5 {
+                              crownPressCount += 1
+                          }
+                          else {
+                              crownPressCount = 0
+                          }
+                          lastUpdatedTs = update.timestamp
+                          
+                          // Triple-press crown to purge nearby anchors and recenter
+                          if crownPressCount >= 2 {
+                              print("Reset world origin!")
+                              
+                              // Purge all existing world anchors within 3.5m
+                              for anchorPurge in worldAnchors {
+                                  do {
+                                      if anchorDistanceFromOrigin(anchor: update.anchor) < 3.5 {
+                                          try await worldTracking.removeAnchor(anchorPurge.value)
+                                      }
+                                  }
+                                  catch {
+                                      // don't care
+                                  }
+                                  worldAnchors.removeValue(forKey: anchorPurge.key)
+                              }
+                      
+                              self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: matrix_identity_float4x4)
+                              self.worldTrackingAddedOriginAnchor = true
+                              if settings.keepSteamVRCenter {
+                                  self.worldTrackingSteamVRTransform = anchorTransform
+                              }
+                              
+                              do {
+                                  try await worldTracking.addAnchor(self.worldOriginAnchor)
+                              }
+                              catch {
+                                  // don't care
+                              }
+                              
+                              crownPressCount = 0
+                          }
+                      }
+                  }
+                  
+              case .removed:
+                  break
+              }
+          }
+      }
+    
+    // World tracking updates with recentering
+    @MainActor
+    func processWorldTrackingUpdatesRecentering() async {
        // guard worldTracking.state == .running else { return }
         for await update in worldTracking.anchorUpdates {
             let anchor = update.anchor
@@ -518,10 +620,6 @@ Remove old origins before placing new ones.
             
             switch update.event {
             case .added:
-                
-//                if let persistedObjectFileName = persistedObjectFileNamePerAnchor[anchor.id] {
-//                    attachPersistedObjectToAnchor(persistedObjectFileName, anchor: anchor)
-//                }
                 if let persistedOriginFileName = persistedOriginFileNamePerAnchor[anchor.id] {
                     attachPersistedOriginToAnchor(persistedOriginFileName, anchor: anchor)
                 } else if let originBeingAnchored = originsBeingAnchored[anchor.id] {
@@ -541,116 +639,7 @@ Remove old origins before placing new ones.
                         }
                     }
                 }
-                
                 fallthrough
-//            case .updated:
-                // This checks every world anchor
-                // Check for prior world anchors
-//                let anchor = update.anchor
-//                if let originType = PersistenceManager.shared.persistedOriginDataPerAnchor[anchor.id] {
-//                    await PersistenceManager.shared.attachPersistedOriginToAnchor(originType, anchor: anchor)
-//                } else if let originBeingAnchored = PersistenceManager.shared.originsBeingAnchored[anchor.id] {
-//                    PersistenceManager.shared.originsBeingAnchored.removeValue(forKey: anchor.id)
-//                    PersistenceManager.shared.anchoredOrigins[anchor.id] = originBeingAnchored
-//                    //Display Origin (we don't need to display)
-//                }
-                
-         //       worldAnchors[anchor.id] = anchor
-//                if !self.worldTrackingAddedOriginAnchor {
-//                    print("Early origin anchor?", anchorDistanceFromOrigin(anchor: update.anchor), "Current Origin,", self.worldOriginAnchor.id)
-//                    
-//                    // If we randomly get an anchor added within 3.5m, consider that our origin
-//                    // What would randomly cause an ahcor
-//                    if anchorDistanceFromOrigin(anchor: update.anchor) < 3.5 {
-//                        print("Set new origin!")
-//                        
-//                        // This has a (positive) minor side-effect: all redundant anchors within 3.5m will get cleaned up,
-//                        // though which anchor gets chosen will be arbitrary.
-//                        // But there should only be one anyway.
-//                        
-//                        //Setup list of anchors similar to persistence manager to store only one Origin Anchor
-//                        do {
-//                            try await worldTracking.removeAnchor(self.worldOriginAnchor)
-//                        }
-//                        catch {
-//                            // don't care
-//                        }
-//                        
-//                        worldOriginAnchor = update.anchor
-//                        self.worldTrackingAddedOriginAnchor = true
-//                    }
-//                }
-//                
-//                if update.anchor.id == worldOriginAnchor.id {
-//                    self.worldOriginAnchor = update.anchor
-//                    
-//                    // This seems to happen when headset is removed, or on app close.
-//                    if !update.anchor.isTracked {
-//                        // print("Headset removed?")
-//                        //EventHandler.shared.handleHeadsetRemoved()
-//                        //resetPlayspace()
-//                        continue
-//                    }
-//                    
-//                    let anchorTransform = update.anchor.originFromAnchorTransform
-//                    if settings.keepSteamVRCenter {
-//                        self.worldTrackingSteamVRTransform = anchorTransform
-//                    }
-//                    
-//                    //Crown-press doesn't work for me?
-//                    // Crown-press shenanigans
-//                    if update.event == .updated {
-//                        let sinceLast = update.timestamp - lastUpdatedTs
-//                        if sinceLast < 3.0 && sinceLast > 0.5 {
-//                            crownPressCount += 1
-//                        }
-//                        else {
-//                            crownPressCount = 0
-//                        }
-//                        lastUpdatedTs = update.timestamp
-//                        
-//                        // Triple-press crown to purge nearby anchors and recenter
-//                        if crownPressCount >= 2 {
-//                            print("Reset world origin!")
-//                            
-//                            // Purge all existing world anchors within 3.5m
-//                            for anchorPurge in worldAnchors {
-//                                do {
-//                                    if anchorDistanceFromOrigin(anchor: update.anchor) < 3.5 {
-//                                        guard worldTracking.state == .running else { break }
-//                                        try await worldTracking.removeAnchor(anchorPurge.value)
-//                                    }
-//                                }
-//                                catch {
-//                                    // don't care
-//                                }
-//                                worldAnchors.removeValue(forKey: anchorPurge.key)
-//                            }
-//                            
-//                            let device = getDevice()
-//                            if (device != nil) {
-//                                //Use device for origin to track distance traveled
-//                                self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: device!.originFromAnchorTransform)
-//                            } else {
-//                                self.worldOriginAnchor = WorldAnchor(originFromAnchorTransform: matrix_identity_float4x4)
-//                            }
-//                            self.worldTrackingAddedOriginAnchor = true
-//                            if settings.keepSteamVRCenter {
-//                                self.worldTrackingSteamVRTransform = anchorTransform
-//                            }
-//                            
-//                            do {
-//                                
-//                                try await worldTracking.addAnchor(self.worldOriginAnchor)
-//                            }
-//                            catch {
-//                                // don't care
-//                            }
-//                            
-//                            crownPressCount = 0
-//                        }
-//                    }
-//                }
             case .updated:
                 //Is the update where I need to fix recentering?
                 if anchor.id == worldOriginAnchor.id {

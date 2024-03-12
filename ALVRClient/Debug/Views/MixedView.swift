@@ -45,7 +45,11 @@ struct MixedView: View {
                                       settings:settings)
         }
         .task {
-            await events.world.processWorldTrackingUpdates()
+            if settings.autoRecenter {
+                await events.world.processWorldTrackingUpdatesRecentering()
+            } else {
+                await events.world.processWorldTrackingUpdates()
+            }
         }
         .task {
             await events.world.processDeviceAnchorUpdates()
