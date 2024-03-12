@@ -150,7 +150,7 @@ class WorldTracker {
         }
         Task {
             //Only not doing this because mixed view passes this task in
-            //await processWorldTrackingUpdates()
+            await processWorldTrackingUpdates()
         }
         Task {
             await processHandTrackingUpdates()
@@ -531,7 +531,7 @@ Remove old origins before placing new ones.
                     // Now that the anchor has been successfully added, display the object.
                     EventHandler.shared.rootEntity.addChild(originBeingAnchored)
                     //Only display object once added to rootEntity
-                    self.worldTrackingSteamVRTransform = anchor.originFromAnchorTransform
+                    //self.worldTrackingSteamVRTransform = anchor.originFromAnchorTransform
                 } else {
                     if anchoredOrigins[anchor.id] == nil {
                         Task {
@@ -652,6 +652,7 @@ Remove old origins before placing new ones.
 //                    }
 //                }
             case .updated:
+                //Is the update where I need to fix recentering?
                 if anchor.id == worldOriginAnchor.id {
                     self.worldOriginAnchor = anchor
                     self.worldTrackingAddedOriginAnchor = true

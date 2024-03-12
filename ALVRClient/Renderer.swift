@@ -347,6 +347,9 @@ class Renderer {
     private func updateGameStateForVideoFrame(drawable: LayerRenderer.Drawable, framePose: simd_float4x4) {
         let simdDeviceAnchor = drawable.deviceAnchor != nil ? drawable.deviceAnchor!.originFromAnchorTransform : matrix_identity_float4x4
         
+        if (simdDeviceAnchor == matrix_identity_float4x4) {
+            print("Nil simdDeviceAnchor")
+        }
         if let device = world.getDevice() {
             let distanceFromCenter = world.deviceDistanceFromCenter(anchor: device)
             EventHandler.shared.updateDistanceFromCenter(distanceFromCenter)
@@ -371,7 +374,7 @@ class Renderer {
                                                    nearZ: Double(drawable.depthRange.y),
                                                    farZ: Double(drawable.depthRange.x),
                                                    reverseZ: true)
-            return Uniforms(projectionMatrix: .init(projection),  modelViewMatrix: viewMatrix, tangents: view.tangents)
+            return Uniforms(projectionMatrix: .init(projection), modelViewMatrixFrame: viewMatrixFrame, modelViewMatrix: viewMatrix, tangents: view.tangents)
         }
         
         self.uniforms[0].uniforms.0 = uniforms(forViewIndex: 0)
@@ -545,8 +548,11 @@ class Renderer {
         
         if renderingStreaming && frameIsSuitableForDisplaying {
             //print("render")
-            renderStreamingFrame(drawable: drawable, commandBuffer: commandBuffer, queuedFrame: queuedFrame, framePose: framePreviouslyPredictedPose ?? matrix_identity_float4x4)
-        }
+            let fPose = framePreviouslyPredictedPose ?? matrix_identity_float4x4
+            if (fPose == matrix_identity_float4x4) {
+                print("Rendering to nil matrix")
+            }
+            renderStreamingFrame(drawable: drawable, commandBuffer: commandBuffer, queuedFrame: queuedFrame, framePose: fPose)        }
         else {
             // TODO: draw a cool loading logo
             // TODO: maybe also show the room in wireframe or something cool here

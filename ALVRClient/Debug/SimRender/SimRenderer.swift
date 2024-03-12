@@ -226,25 +226,25 @@ extension Renderer {
                 
                 let simdDeviceAnchor = device.originFromAnchorTransform
 
-                func uniforms(forViewIndex viewIndex: Int) -> Uniforms {
-                    let view = drawable.views[viewIndex]
-                    let viewMatrix = simdDeviceAnchor
-                    let viewMatrixFrame = simdDeviceAnchor
-                    let projection = ProjectiveTransform3D(leftTangent: Double(view.tangents[0]),
-                                                           rightTangent: Double(view.tangents[1]),
-                                                           topTangent: Double(view.tangents[2]),
-                                                           bottomTangent: Double(view.tangents[3]),
-                                                           nearZ: Double(drawable.depthRange.y),
-                                                           farZ: Double(drawable.depthRange.x),
-                                                           reverseZ: true)
-                    
-                    return Uniforms(projectionMatrix: .init(projection),  modelViewMatrix: viewMatrix, tangents: view.tangents)
-                }
-                
-                self.uniforms[0].uniforms.0 = uniforms(forViewIndex: 0)
-                if drawable.views.count > 1 {
-                    self.uniforms[0].uniforms.1 = uniforms(forViewIndex: 1)
-                }
+//                func uniforms(forViewIndex viewIndex: Int) -> Uniforms {
+//                    let view = drawable.views[viewIndex]
+//                    let viewMatrix = simdDeviceAnchor
+//                    let viewMatrixFrame = simdDeviceAnchor
+//                    let projection = ProjectiveTransform3D(leftTangent: Double(view.tangents[0]),
+//                                                           rightTangent: Double(view.tangents[1]),
+//                                                           topTangent: Double(view.tangents[2]),
+//                                                           bottomTangent: Double(view.tangents[3]),
+//                                                           nearZ: Double(drawable.depthRange.y),
+//                                                           farZ: Double(drawable.depthRange.x),
+//                                                           reverseZ: true)
+//                    
+//                    return Uniforms(projectionMatrix: .init(projection),  modelViewMatrix: viewMatrix, tangents: view.tangents)
+//                }
+//                
+//                self.uniforms[0].uniforms.0 = uniforms(forViewIndex: 0)
+//                if drawable.views.count > 1 {
+//                    self.uniforms[0].uniforms.1 = uniforms(forViewIndex: 1)
+//                }
                 
                 rotation += 0.01
 

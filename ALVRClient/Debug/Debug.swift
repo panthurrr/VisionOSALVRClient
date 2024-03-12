@@ -186,12 +186,22 @@ struct Debug: View {
             model.isShowingSimClient = false
             await dismissImmersiveSpace()
             events.reset()
+            if (model.immersiveSpaceID != "Mixed") {
+                print("Initialize via Debug page")
+                await events.world.initializeAr(arSession:ARKitSession(),
+                                                worldTracking: WorldTrackingProvider(),
+                                                handTracking:HandTrackingProvider(),
+                                                sceneReconstruction:SceneReconstructionProvider(),
+                                                planeDetection:PlaneDetectionProvider(),
+                                                settings:settings)
+                await events.world.runARKitSession()
+            }
             await openImmersiveSpace(id: model.immersiveSpaceID)
             model.isShowingSimClient = true
             events.alvrInitialized = true
             events.streamingActive = true
             try? await Task.sleep(nanoseconds: 1 * 1_000_000_000)
-//            events.world.resetPlayspace()
+            events.world.resetPlayspace()
             events.world.setCenter()
             isRecentering = false
         }
